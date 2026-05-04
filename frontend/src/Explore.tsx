@@ -108,6 +108,7 @@ export default function Explore() {
       form.append('messages', JSON.stringify([...chatMessages, userMsg]))
       form.append('user_message', chatInput)
       const res = await axios.post(`${API}/explore/chat`, form)
+      console.log('Chat response:', res.data)
       setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
       if (res.data.new_filters) {
         setFilters(res.data.new_filters)

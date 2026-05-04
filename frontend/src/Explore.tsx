@@ -44,7 +44,11 @@ export default function Explore() {
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { 'text/csv': ['.csv'] }, multiple: false
+    onDrop,
+    accept: { 'text/csv': ['.csv'] },
+    multiple: false,
+    noClick: false,
+    noKeyboard: false
   })
 
   const toggleField = (name: string) => {

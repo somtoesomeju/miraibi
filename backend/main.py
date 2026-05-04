@@ -147,6 +147,9 @@ async def explore_chat(
     messages: str = "[]",
     user_message: str = ""
 ):
+    print(f"DEBUG user_message: '{user_message}'")  # add this line
+    print(f"DEBUG messages: '{messages}'")           # add this line
+    
     contents = await file.read()
     df = pd.read_csv(io.BytesIO(contents))
 

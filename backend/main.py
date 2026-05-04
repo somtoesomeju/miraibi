@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Request
+from fastapi import FastAPI, UploadFile, File, Request, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -140,12 +140,12 @@ Provide a concise insight about what this explore reveals."""
 @app.post("/explore/chat")
 async def explore_chat(
     file: UploadFile = File(...),
-    model_yaml: str = "",
-    selected_fields: str = "[]",
-    filters: str = "[]",
-    calculations: str = "[]",
-    messages: str = "[]",
-    user_message: str = ""
+    model_yaml: str = Form(""),
+    selected_fields: str = Form("[]"),
+    filters: str = Form("[]"),
+    calculations: str = Form("[]"),
+    messages: str = Form("[]"),
+    user_message: str = Form("")
 ):
     print(f"DEBUG user_message: '{user_message}'")  # add this line
     print(f"DEBUG messages: '{messages}'")           # add this line

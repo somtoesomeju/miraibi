@@ -1,0 +1,21 @@
+# Example MiraiML model definition
+model:
+  name: Sample BI Model
+  description: A sample model for business intelligence insights
+  version: 1.0.0
+
+data_sources:
+  - name: sales_data
+    type: duckdb
+    query: SELECT * FROM sales
+
+insights:
+  - name: total_sales
+    type: metric
+    calculation: SUM(sales_amount)
+    description: Total sales amount
+
+  - name: top_products
+    type: ranking
+    calculation: TOP 10 products by sales
+    description: Top selling products

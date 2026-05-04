@@ -195,4 +195,4 @@ Otherwise just respond conversationally. Be concise and insightful."""
     return {
         "reply": reply,
         "new_filters": new_filters
-    }
+    }# force redeploy Mon May  4 21:20:27 UTC 2026

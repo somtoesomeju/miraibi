@@ -1,21 +1,62 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 import duckdb
-from anthropic import Anthropic
+import anthropic
+import pandas as pd
+import io
+import os
 
-app = FastAPI(title="Miraibi Backend", description="Backend API for Miraibi BI tool using Claude for insights")
+load_dotenv()
 
-# Initialize DuckDB connection
-conn = duckdb.connect(database=':memory:', read_only=False)
+app = FastAPI(title="Mirai BI", version="0.1.0")
 
-# Placeholder for Claude API key - set via environment variable
-# anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/")
-def root():
-    return {"message": "Welcome to Miraibi Backend API"}
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {"status": "ok", "app": "Mirai BI"}
 
-# TODO: Add endpoints for data analysis, Claude integration, etc.
+@app.post("/query")
+async def query_csv(file: UploadFile = File(...), question: str = "Give me a summary of this data"):
+    # Load CSV into DuckDB
+    contents = await file.read()
+    df = pd.read_csv(io.BytesIO(contents))
+    con = duckdb.connect()
+    con.register("dataset", df)
+
+    # Run a summary query
+    result = con.execute("SELECT * FROM dataset LIMIT 50").df()
+    data_preview = result.to_string(index=False)
+
+    # Send to Claude for insight
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": f"""You are a data analyst assistant for Mirai BI.
+                
+Here is a preview of the dataset:
+{data_preview}
+
+User question: {question}
+
+Provide a concise, insightful analysis. Highlight trends, anomalies, or key takeaways."""
+            }
+        ]
+    )
+
+    return {
+        "insight": message.content[0].text,
+        "rows": len(df),
+        "columns": list(df.columns)
+    }

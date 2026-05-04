@@ -112,7 +112,7 @@ async def explore_query(
     result = run_explore(df, model_yaml, selected, filter_list, calc_list)
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-5",
         max_tokens=1024,
         messages=[{
             "role": "user",
@@ -186,7 +186,7 @@ Otherwise just respond conversationally. Be concise and insightful."""
     chat_messages.append({"role": "user", "content": user_message})
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-5",
         max_tokens=1024,
         system=system_prompt,
         messages=chat_messages

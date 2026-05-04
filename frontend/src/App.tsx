@@ -4,7 +4,7 @@ import axios from 'axios'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { Upload, Sparkles, TrendingUp, DollarSign, Users, Award } from 'lucide-react'
 
-const API = ''
+const API = 'https://miraibi-production.up.railway.app'
 
 interface Insight {
   insight: string

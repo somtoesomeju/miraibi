@@ -11,6 +11,7 @@ interface Measure { name: string; type: string; field: string; aggregation: stri
 interface Model { model: string; dimensions: Dimension[]; measures: Measure[]; calculations: any[] }
 interface Filter { field: string; operator: string; value: string }
 interface Calculation { name: string; expression: string }
+interface ChatMessage { role: string; content: string }
 
 const OPERATORS = ['equals', 'not_equals', 'greater_than', 'less_than', 'contains']
 const COLORS = ['#1D9E75', '#378ADD', '#BA7517', '#7F77DD', '#D85A30']
@@ -20,6 +21,7 @@ export default function Explore() {
   const [model, setModel] = useState<Model | null>(null)
   const [modelYaml, setModelYaml] = useState('')
   const [showYaml, setShowYaml] = useState(false)
+  const [showChat, setShowChat] = useState(false)
   const [selectedFields, setSelectedFields] = useState<string[]>([])
   const [filters, setFilters] = useState<Filter[]>([])
   const [calculations, setCalculations] = useState<Calculation[]>([])
@@ -27,9 +29,9 @@ export default function Explore() {
   const [resultCols, setResultCols] = useState<string[]>([])
   const [insight, setInsight] = useState('')
   const [loading, setLoading] = useState(false)
-  const [chatMessages, setChatMessages] = useState<{role: string, content: string}[]>([])
-const [chatInput, setChatInput] = useState('')
-const [chatLoading, setChatLoading] = useState(false)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
 
   const onDrop = useCallback(async (files: File[]) => {
     const f = files[0]
@@ -63,7 +65,7 @@ const [chatLoading, setChatLoading] = useState(false)
     setCalculations(prev => prev.map((c, idx) => idx === i ? { ...c, [key]: val } : c))
   }
 
-  const runQuery = async () => {
+  const runQuery = async (overrideFilters?: Filter[]) => {
     if (!file) return
     setLoading(true)
     try {
@@ -71,7 +73,7 @@ const [chatLoading, setChatLoading] = useState(false)
       form.append('file', file)
       form.append('model_yaml', modelYaml)
       form.append('selected_fields', JSON.stringify(selectedFields))
-      form.append('filters', JSON.stringify(filters))
+      form.append('filters', JSON.stringify(overrideFilters ?? filters))
       form.append('calculations', JSON.stringify(calculations))
       const res = await axios.post(`${API}/explore/query`, form)
       setResults(res.data.data)
@@ -82,58 +84,81 @@ const [chatLoading, setChatLoading] = useState(false)
   }
 
   const sendMessage = async () => {
-  if (!file || !chatInput.trim()) return
-  const userMsg = { role: 'user', content: chatInput }
-  setChatMessages(prev => [...prev, userMsg])
-  setChatInput('')
-  setChatLoading(true)
-  try {
-    const form = new FormData()
-    form.append('file', file)
-    form.append('model_yaml', modelYaml)
-    form.append('selected_fields', JSON.stringify(selectedFields))
-    form.append('filters', JSON.stringify(filters))
-    form.append('calculations', JSON.stringify(calculations))
-    form.append('messages', JSON.stringify([...chatMessages, userMsg]))
-    form.append('user_message', chatInput)
-    const res = await axios.post(`${API}/explore/chat`, form)
-    setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
-    if (res.data.new_filters) {
-      setFilters(res.data.new_filters)
-      await runQuery()
-    }
-  } catch (e) { console.error(e) }
-  setChatLoading(false)
-}
+    if (!file || !chatInput.trim()) return
+    const userMsg: ChatMessage = { role: 'user', content: chatInput }
+    setChatMessages(prev => [...prev, userMsg])
+    setChatInput('')
+    setChatLoading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('model_yaml', modelYaml)
+      form.append('selected_fields', JSON.stringify(selectedFields))
+      form.append('filters', JSON.stringify(filters))
+      form.append('calculations', JSON.stringify(calculations))
+      form.append('messages', JSON.stringify([...chatMessages, userMsg]))
+      form.append('user_message', chatInput)
+      const res = await axios.post(`${API}/explore/chat`, form)
+      setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
+      if (res.data.new_filters) {
+        setFilters(res.data.new_filters)
+        await runQuery(res.data.new_filters)
+      }
+    } catch (e) { console.error(e) }
+    setChatLoading(false)
+  }
 
   const allFields = model ? [
     ...model.dimensions.map(d => ({ ...d, kind: 'dimension' })),
     ...model.measures.map(m => ({ ...m, kind: 'measure' }))
   ] : []
 
-  const s = { 
+  const s = {
     panel: { background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20, marginBottom: 12 },
     label: { fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 10, display: 'block' },
-    chip: (active: boolean, kind: string) => ({ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 6, border: `0.5px solid ${active ? (kind === 'dimension' ? '#1D9E75' : '#378ADD') : '#2a2a2a'}`, background: active ? (kind === 'dimension' ? 'rgba(29,158,117,0.1)' : 'rgba(55,138,221,0.1)') : 'transparent', color: active ? (kind === 'dimension' ? '#1D9E75' : '#378ADD') : '#888', fontSize: 12, cursor: 'pointer', margin: '0 6px 6px 0', fontFamily: 'DM Mono, monospace' }),
+    chip: (active: boolean, kind: string) => ({
+      display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 6,
+      border: `0.5px solid ${active ? (kind === 'dimension' ? '#1D9E75' : '#378ADD') : '#2a2a2a'}`,
+      background: active ? (kind === 'dimension' ? 'rgba(29,158,117,0.1)' : 'rgba(55,138,221,0.1)') : 'transparent',
+      color: active ? (kind === 'dimension' ? '#1D9E75' : '#378ADD') : '#888',
+      fontSize: 12, cursor: 'pointer', margin: '0 6px 6px 0', fontFamily: 'DM Mono, monospace'
+    }),
     input: { background: '#0e0e0e', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 10px', color: '#f0ede8', fontFamily: 'DM Mono, monospace', fontSize: 12, outline: 'none' },
     select: { background: '#0e0e0e', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 10px', color: '#f0ede8', fontFamily: 'DM Mono, monospace', fontSize: 12, outline: 'none' },
-    btn: (color: string) => ({ background: 'transparent', border: `0.5px solid ${color}`, borderRadius: 6, padding: '5px 12px', color, fontFamily: 'DM Mono, monospace', fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 })
+    btn: (color: string) => ({ background: 'transparent', border: `0.5px solid ${color}`, borderRadius: 6, padding: '5px 12px', color, fontFamily: 'DM Mono, monospace', fontSize: 11, cursor: 'pointer', display: 'inline-flex' as const, alignItems: 'center', gap: 5 })
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem', position: 'relative' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '0.5px solid #2a2a2a' }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.5px' }}>mirai<span style={{ color: '#1D9E75' }}>bi</span> <span style={{ color: '#555', fontWeight: 400 }}>/ explore</span></div>
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.5px' }}>
+            mirai<span style={{ color: '#1D9E75' }}>bi</span> <span style={{ color: '#555', fontWeight: 400 }}>/ explore</span>
+          </div>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', marginTop: 4 }}>MiraiML visual explorer</div>
         </div>
-        {model && (
-          <button style={s.btn('#555')} onClick={() => setShowYaml(!showYaml)}>
-            <Code size={12} />{showYaml ? 'hide yaml' : 'edit yaml'}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {model && (
+            <button style={s.btn('#555')} onClick={() => setShowYaml(!showYaml)}>
+              <Code size={12} />{showYaml ? 'hide yaml' : 'edit yaml'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowChat(!showChat)}
+            style={{
+              background: showChat ? 'rgba(55,138,221,0.15)' : 'transparent',
+              border: `0.5px solid ${showChat ? '#378ADD' : '#2a2a2a'}`,
+              borderRadius: 8, padding: '7px 14px',
+              color: showChat ? '#378ADD' : '#888',
+              fontFamily: 'DM Mono, monospace', fontSize: 12,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
+            }}
+          >
+            <Sparkles size={13} />Chat AI
           </button>
-        )}
+        </div>
       </div>
 
       {/* Upload */}
@@ -151,29 +176,26 @@ const [chatLoading, setChatLoading] = useState(false)
 
           {/* Left panel */}
           <div>
-            {/* File info */}
             <div style={s.panel}>
               <span style={s.label}>dataset</span>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: '#1D9E75' }}>{file?.name}</div>
             </div>
 
-            {/* Fields */}
             <div style={s.panel}>
               <span style={s.label}>dimensions</span>
               <div style={{ marginBottom: 16 }}>
                 {model.dimensions.map(d => (
-                  <span key={d.name} style={s.chip(selectedFields.includes(d.name), 'dimension')} onClick={() => toggleField(d.name)}>{d.name}</span>
+                  <span key={d.name} style={s.chip(selectedFields.includes(d.name), 'dimension') as any} onClick={() => toggleField(d.name)}>{d.name}</span>
                 ))}
               </div>
               <span style={s.label}>measures</span>
               <div>
                 {model.measures.map(m => (
-                  <span key={m.name} style={s.chip(selectedFields.includes(m.name), 'measure')} onClick={() => toggleField(m.name)}>{m.name}</span>
+                  <span key={m.name} style={s.chip(selectedFields.includes(m.name), 'measure') as any} onClick={() => toggleField(m.name)}>{m.name}</span>
                 ))}
               </div>
             </div>
 
-            {/* Filters */}
             <div style={s.panel}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <span style={{ ...s.label, marginBottom: 0 }}>filters</span>
@@ -195,7 +217,6 @@ const [chatLoading, setChatLoading] = useState(false)
               ))}
             </div>
 
-            {/* Calculations */}
             <div style={s.panel}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <span style={{ ...s.label, marginBottom: 0 }}>calculations</span>
@@ -212,9 +233,8 @@ const [chatLoading, setChatLoading] = useState(false)
               ))}
             </div>
 
-            {/* Run button */}
             <button
-              onClick={runQuery}
+              onClick={() => runQuery()}
               disabled={loading || selectedFields.length === 0}
               style={{ width: '100%', background: selectedFields.length > 0 ? '#1D9E75' : '#1a1a1a', border: 'none', borderRadius: 8, padding: '12px', color: selectedFields.length > 0 ? '#fff' : '#555', fontFamily: 'DM Mono, monospace', fontSize: 13, cursor: selectedFields.length > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
@@ -224,7 +244,6 @@ const [chatLoading, setChatLoading] = useState(false)
 
           {/* Right panel */}
           <div>
-            {/* YAML editor */}
             {showYaml && (
               <div style={s.panel}>
                 <span style={s.label}>miraiml model yaml</span>
@@ -236,10 +255,8 @@ const [chatLoading, setChatLoading] = useState(false)
               </div>
             )}
 
-            {/* Results */}
             {results.length > 0 && (
               <>
-                {/* Chart */}
                 <div style={s.panel}>
                   <span style={s.label}>results — {results.length} rows</span>
                   <ResponsiveContainer width="100%" height={250}>
@@ -255,7 +272,6 @@ const [chatLoading, setChatLoading] = useState(false)
                   </ResponsiveContainer>
                 </div>
 
-                {/* Table */}
                 <div style={{ ...s.panel, overflowX: 'auto' }}>
                   <span style={s.label}>data table</span>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
@@ -278,7 +294,6 @@ const [chatLoading, setChatLoading] = useState(false)
                   </table>
                 </div>
 
-                {/* AI Insight */}
                 <div style={{ ...s.panel, borderLeft: '2px solid #1D9E75' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                     <Sparkles size={14} color="#1D9E75" />
@@ -286,69 +301,6 @@ const [chatLoading, setChatLoading] = useState(false)
                   </div>
                   <p style={{ fontSize: 13, color: '#aaa', lineHeight: 1.8 }}>{insight}</p>
                 </div>
-                {/* Chat */}
-{results.length > 0 && (
-  <div style={s.panel}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-      <Sparkles size={14} color="#378ADD" />
-      <span style={{ ...s.label, marginBottom: 0, color: '#378ADD' }}>ask mirai about this data</span>
-    </div>
-
-    {/* Message history */}
-    <div style={{ maxHeight: 320, overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {chatMessages.length === 0 && (
-        <div style={{ color: '#555', fontFamily: 'DM Mono, monospace', fontSize: 12, textAlign: 'center', padding: '1rem' }}>
-          try asking: "show me only march to july" or "which platform had the best roi?"
-        </div>
-      )}
-      {chatMessages.map((msg, i) => (
-        <div key={i} style={{
-          display: 'flex',
-          justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
-        }}>
-          <div style={{
-            maxWidth: '80%',
-            padding: '10px 14px',
-            borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-            background: msg.role === 'user' ? 'rgba(55,138,221,0.15)' : '#1a1a1a',
-            border: `0.5px solid ${msg.role === 'user' ? '#378ADD' : '#2a2a2a'}`,
-            color: msg.role === 'user' ? '#378ADD' : '#aaa',
-            fontFamily: 'DM Mono, monospace',
-            fontSize: 12,
-            lineHeight: 1.7
-          }}>
-            {msg.content}
-          </div>
-        </div>
-      ))}
-      {chatLoading && (
-        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-          <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 2px', background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
-            thinking...
-          </div>
-        </div>
-      )}
-    </div>
-
-    {/* Input */}
-    <div style={{ display: 'flex', gap: 8 }}>
-      <input
-        value={chatInput}
-        onChange={e => setChatInput(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && sendMessage()}
-        placeholder="ask a question about your data..."
-        style={{ flex: 1, background: '#0e0e0e', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '10px 14px', color: '#f0ede8', fontFamily: 'DM Mono, monospace', fontSize: 12, outline: 'none' }}
-      />
-      <button
-        onClick={sendMessage}
-        disabled={chatLoading}
-        style={{ background: 'transparent', border: '0.5px solid #378ADD', borderRadius: 8, padding: '10px 16px', color: '#378ADD', fontFamily: 'DM Mono, monospace', fontSize: 12, cursor: 'pointer' }}
-      >
-        send ↗
-      </button>
-    </div>
-  </div>
-)}
               </>
             )}
 
@@ -366,6 +318,93 @@ const [chatLoading, setChatLoading] = useState(false)
           </div>
         </div>
       )}
+
+      {/* Chat drawer */}
+      <div style={{
+        position: 'fixed', top: 0, right: showChat ? 0 : '-420px',
+        width: 400, height: '100vh', background: '#0e0e0e',
+        borderLeft: '0.5px solid #2a2a2a', transition: 'right 0.3s ease',
+        zIndex: 100, display: 'flex', flexDirection: 'column', padding: '1.5rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '0.5px solid #2a2a2a' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={14} color="#378ADD" />
+              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: '#f0ede8', fontWeight: 500 }}>Chat AI</span>
+            </div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#555', marginTop: 4 }}>powered by claude sonnet</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <select style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '4px 8px', color: '#888', fontFamily: 'DM Mono, monospace', fontSize: 11, outline: 'none' }}>
+              <option value="claude">Claude Sonnet</option>
+              <option value="gpt" disabled>GPT-4o (soon)</option>
+              <option value="gemini" disabled>Gemini (soon)</option>
+            </select>
+            <button onClick={() => setShowChat(false)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', padding: 4 }}>
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        {selectedFields.length > 0 && (
+          <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 12px', marginBottom: 12, fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555' }}>
+            context: {selectedFields.join(', ')} {filters.length > 0 ? `· ${filters.length} filter(s)` : ''}
+          </div>
+        )}
+
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+          {chatMessages.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+              <p style={{ color: '#555', fontFamily: 'DM Mono, monospace', fontSize: 12, lineHeight: 1.7 }}>ask me anything about your data</p>
+              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {['show me only march to july', 'which platform had the best roi?', 'what are the top trends?'].map(suggestion => (
+                  <button key={suggestion} onClick={() => setChatInput(suggestion)} style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 12px', color: '#555', fontFamily: 'DM Mono, monospace', fontSize: 11, cursor: 'pointer', textAlign: 'left' }}>
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {chatMessages.map((msg, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+              <div style={{
+                maxWidth: '85%', padding: '10px 14px',
+                borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                background: msg.role === 'user' ? 'rgba(55,138,221,0.12)' : '#141414',
+                border: `0.5px solid ${msg.role === 'user' ? '#378ADD' : '#2a2a2a'}`,
+                color: msg.role === 'user' ? '#378ADD' : '#aaa',
+                fontFamily: 'DM Mono, monospace', fontSize: 12, lineHeight: 1.7
+              }}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {chatLoading && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 2px', background: '#141414', border: '0.5px solid #2a2a2a', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+                thinking...
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            value={chatInput}
+            onChange={e => setChatInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            placeholder="ask about your data..."
+            style={{ flex: 1, background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '10px 12px', color: '#f0ede8', fontFamily: 'DM Mono, monospace', fontSize: 12, outline: 'none' }}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={chatLoading}
+            style={{ background: 'rgba(55,138,221,0.15)', border: '0.5px solid #378ADD', borderRadius: 8, padding: '10px 14px', color: '#378ADD', fontFamily: 'DM Mono, monospace', fontSize: 12, cursor: 'pointer' }}
+          >
+            ↗
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

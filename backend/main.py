@@ -57,7 +57,7 @@ async def query_csv(file: UploadFile = File(...), question: str = "Give me a sum
 
     # Send to Claude for insight
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-5",
         max_tokens=1024,
         messages=[
             {

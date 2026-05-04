@@ -1,3 +1,4 @@
+import Explore from './Explore'
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import axios from 'axios'
@@ -17,6 +18,7 @@ interface ChartRow {
 }
 
 export default function App() {
+  const [page, setPage] = useState<'dashboard' | 'explore'>('dashboard')
   const [file, setFile] = useState<File | null>(null)
   const [insight, setInsight] = useState<Insight | null>(null)
   const [chartData, setChartData] = useState<ChartRow[]>([])
@@ -87,16 +89,18 @@ export default function App() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem' }}>
 
         {/* Topbar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '0.5px solid #2a2a2a' }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.5px' }}>
-            mirai<span style={{ color: '#1D9E75' }}>bi</span>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {file && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{file.name}</span>}
-            {insight && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{insight.rows} rows · {insight.columns.length} cols</span>}
-          </div>
-        </div>
-
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '0.5px solid #2a2a2a' }}>
+  <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.5px' }}>
+    mirai<span style={{ color: '#1D9E75' }}>bi</span>
+  </div>
+  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+    <button onClick={() => setPage('dashboard')} style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 12, color: page === 'dashboard' ? '#1D9E75' : '#555', cursor: 'pointer' }}>dashboard</button>
+    <button onClick={() => setPage('explore')} style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 12, color: page === 'explore' ? '#1D9E75' : '#555', cursor: 'pointer' }}>explore</button>
+    {file && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{file.name}</span>}
+    {insight && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{insight.rows} rows · {insight.columns.length} cols</span>}
+  </div>
+</div>
+      {page === 'explore' ? <Explore /> : (<>
         {/* Upload */}
         <div {...getRootProps()} style={{ border: `0.5px dashed ${isDragActive ? '#1D9E75' : '#2a2a2a'}`, borderRadius: 12, padding: '2.5rem', textAlign: 'center', marginBottom: '2rem', background: isDragActive ? 'rgba(29,158,117,0.05)' : '#141414', cursor: 'pointer', transition: 'all 0.2s' }}>
           <input {...getInputProps()} />
@@ -192,8 +196,8 @@ export default function App() {
             </div>
           </>
         )}
+        </>)}
       </div>
     </div>
   )
 } 
-

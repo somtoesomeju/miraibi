@@ -27,6 +27,9 @@ export default function Explore() {
   const [resultCols, setResultCols] = useState<string[]>([])
   const [insight, setInsight] = useState('')
   const [loading, setLoading] = useState(false)
+  const [chatMessages, setChatMessages] = useState<{role: string, content: string}[]>([])
+const [chatInput, setChatInput] = useState('')
+const [chatLoading, setChatLoading] = useState(false)
 
   const onDrop = useCallback(async (files: File[]) => {
     const f = files[0]
@@ -77,6 +80,31 @@ export default function Explore() {
     } catch (e) { console.error(e) }
     setLoading(false)
   }
+
+  const sendMessage = async () => {
+  if (!file || !chatInput.trim()) return
+  const userMsg = { role: 'user', content: chatInput }
+  setChatMessages(prev => [...prev, userMsg])
+  setChatInput('')
+  setChatLoading(true)
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('model_yaml', modelYaml)
+    form.append('selected_fields', JSON.stringify(selectedFields))
+    form.append('filters', JSON.stringify(filters))
+    form.append('calculations', JSON.stringify(calculations))
+    form.append('messages', JSON.stringify([...chatMessages, userMsg]))
+    form.append('user_message', chatInput)
+    const res = await axios.post(`${API}/explore/chat`, form)
+    setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
+    if (res.data.new_filters) {
+      setFilters(res.data.new_filters)
+      await runQuery()
+    }
+  } catch (e) { console.error(e) }
+  setChatLoading(false)
+}
 
   const allFields = model ? [
     ...model.dimensions.map(d => ({ ...d, kind: 'dimension' })),
@@ -258,6 +286,69 @@ export default function Explore() {
                   </div>
                   <p style={{ fontSize: 13, color: '#aaa', lineHeight: 1.8 }}>{insight}</p>
                 </div>
+                {/* Chat */}
+{results.length > 0 && (
+  <div style={s.panel}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+      <Sparkles size={14} color="#378ADD" />
+      <span style={{ ...s.label, marginBottom: 0, color: '#378ADD' }}>ask mirai about this data</span>
+    </div>
+
+    {/* Message history */}
+    <div style={{ maxHeight: 320, overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {chatMessages.length === 0 && (
+        <div style={{ color: '#555', fontFamily: 'DM Mono, monospace', fontSize: 12, textAlign: 'center', padding: '1rem' }}>
+          try asking: "show me only march to july" or "which platform had the best roi?"
+        </div>
+      )}
+      {chatMessages.map((msg, i) => (
+        <div key={i} style={{
+          display: 'flex',
+          justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+        }}>
+          <div style={{
+            maxWidth: '80%',
+            padding: '10px 14px',
+            borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+            background: msg.role === 'user' ? 'rgba(55,138,221,0.15)' : '#1a1a1a',
+            border: `0.5px solid ${msg.role === 'user' ? '#378ADD' : '#2a2a2a'}`,
+            color: msg.role === 'user' ? '#378ADD' : '#aaa',
+            fontFamily: 'DM Mono, monospace',
+            fontSize: 12,
+            lineHeight: 1.7
+          }}>
+            {msg.content}
+          </div>
+        </div>
+      ))}
+      {chatLoading && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+          <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 2px', background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+            thinking...
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Input */}
+    <div style={{ display: 'flex', gap: 8 }}>
+      <input
+        value={chatInput}
+        onChange={e => setChatInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && sendMessage()}
+        placeholder="ask a question about your data..."
+        style={{ flex: 1, background: '#0e0e0e', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '10px 14px', color: '#f0ede8', fontFamily: 'DM Mono, monospace', fontSize: 12, outline: 'none' }}
+      />
+      <button
+        onClick={sendMessage}
+        disabled={chatLoading}
+        style={{ background: 'transparent', border: '0.5px solid #378ADD', borderRadius: 8, padding: '10px 16px', color: '#378ADD', fontFamily: 'DM Mono, monospace', fontSize: 12, cursor: 'pointer' }}
+      >
+        send ↗
+      </button>
+    </div>
+  </div>
+)}
               </>
             )}
 

@@ -4,7 +4,7 @@ import axios from 'axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Upload, Plus, X, Sparkles, Play, Code } from 'lucide-react'
 
-const API = 'https://miraibi-production.up.railway.app'
+const API = import.meta.env.PROD ? 'https://miraibi-production.up.railway.app' : ''
 
 interface Dimension { name: string; type: string; field: string }
 interface Measure { name: string; type: string; field: string; aggregation: string }
@@ -33,14 +33,19 @@ export default function Explore() {
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
 
-  const onDrop = useCallback(async (files: File[]) => {
-    const f = files[0]
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (!acceptedFiles.length) return
+    const f = acceptedFiles[0]
     setFile(f)
-    const form = new FormData()
-    form.append('file', f)
-    const res = await axios.post(`${API}/explore/model`, form)
-    setModel(res.data.model)
-    setModelYaml(res.data.yaml)
+    try {
+      const form = new FormData()
+      form.append('file', f)
+      const res = await axios.post(`${API}/explore/model`, form)
+      setModel(res.data.model)
+      setModelYaml(res.data.yaml)
+    } catch (e) {
+      console.error('Upload error:', e)
+    }
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

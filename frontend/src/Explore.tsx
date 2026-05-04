@@ -326,6 +326,7 @@ export default function Explore() {
       {/* Chat drawer */}
       <div style={{
         position: 'fixed', top: 0, right: showChat ? 0 : '-420px',
+      pointerEvents: showChat ? 'all' : 'none',
         width: 400, height: '100vh', background: '#0e0e0e',
         borderLeft: '0.5px solid #2a2a2a', transition: 'right 0.3s ease',
         zIndex: 100, display: 'flex', flexDirection: 'column', padding: '1.5rem'

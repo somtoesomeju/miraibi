@@ -1,3 +1,4 @@
+import ReactMarkdown from 'react-markdown'
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import axios from 'axios'
@@ -11,7 +12,12 @@ interface Measure { name: string; type: string; field: string; aggregation: stri
 interface Model { model: string; dimensions: Dimension[]; measures: Measure[]; calculations: any[] }
 interface Filter { field: string; operator: string; value: string }
 interface Calculation { name: string; expression: string }
-interface ChatMessage { role: string; content: string }
+interface ChatMessage { 
+  role: string
+  content: string
+  chartData?: any[]
+  chartCols?: string[]
+}
 
 const OPERATORS = ['equals', 'not_equals', 'greater_than', 'less_than', 'contains']
 const COLORS = ['#1D9E75', '#378ADD', '#BA7517', '#7F77DD', '#D85A30']
@@ -74,14 +80,14 @@ export default function Explore() {
     setCalculations(prev => prev.map((c, idx) => idx === i ? { ...c, [key]: val } : c))
   }
 
-  const runQuery = async (overrideFilters?: Filter[]) => {
+  const runQuery = async (overrideFilters?: Filter[], overrideFields?: string[]) => {
     if (!file) return
     setLoading(true)
     try {
       const form = new FormData()
       form.append('file', file)
       form.append('model_yaml', modelYaml)
-      form.append('selected_fields', JSON.stringify(selectedFields))
+      form.append('selected_fields', JSON.stringify(overrideFields ?? selectedFields))
       form.append('filters', JSON.stringify(overrideFilters ?? filters))
       form.append('calculations', JSON.stringify(calculations))
       const res = await axios.post(`${API}/explore/query`, form)
@@ -92,31 +98,61 @@ export default function Explore() {
     setLoading(false)
   }
 
-  const sendMessage = async () => {
-    if (!file || !chatInput.trim()) return
-    const userMsg: ChatMessage = { role: 'user', content: chatInput }
-    setChatMessages(prev => [...prev, userMsg])
-    setChatInput('')
-    setChatLoading(true)
-    try {
-      const form = new FormData()
-      form.append('file', file)
-      form.append('model_yaml', modelYaml)
-      form.append('selected_fields', JSON.stringify(selectedFields))
-      form.append('filters', JSON.stringify(filters))
-      form.append('calculations', JSON.stringify(calculations))
-      form.append('messages', JSON.stringify([...chatMessages, userMsg]))
-      form.append('user_message', userMsg.content)
-      const res = await axios.post(`${API}/explore/chat`, form)
-      console.log('Chat response:', res.data)
-      setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
-      if (res.data.new_filters) {
-        setFilters(res.data.new_filters)
-        await runQuery(res.data.new_filters)
-      }
-    } catch (e) { console.error(e) }
-    setChatLoading(false)
+  const runQuerySilent = async (overrideFilters?: Filter[], overrideFields?: string[]) => {
+  if (!file) return null
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('model_yaml', modelYaml)
+    form.append('selected_fields', JSON.stringify(overrideFields ?? selectedFields))
+    form.append('filters', JSON.stringify(overrideFilters ?? filters))
+    form.append('calculations', JSON.stringify(calculations))
+    const res = await axios.post(`${API}/explore/query`, form)
+    return { data: res.data.data, columns: res.data.columns }
+  } catch (e) { 
+    console.error(e)
+    return null
   }
+}
+
+const sendMessage = async () => {
+  if (!file || !chatInput.trim()) return
+  const userMsg: ChatMessage = { role: 'user', content: chatInput }
+  setChatMessages(prev => [...prev, userMsg])
+  setChatInput('')
+  setChatLoading(true)
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('model_yaml', modelYaml)
+    form.append('selected_fields', JSON.stringify(selectedFields))
+    form.append('filters', JSON.stringify(filters))
+    form.append('calculations', JSON.stringify(calculations))
+    form.append('messages', JSON.stringify([...chatMessages, userMsg]))
+    form.append('user_message', userMsg.content)
+    const res = await axios.post(`${API}/explore/chat`, form)
+
+    const assistantMsg: ChatMessage = { 
+      role: 'assistant', 
+      content: res.data.reply,
+    }
+
+    if (res.data.new_fields || res.data.new_filters) {
+      const updatedFields = res.data.new_fields ?? selectedFields
+      const updatedFilters = res.data.new_filters ?? filters
+      setSelectedFields(updatedFields)
+      setFilters(updatedFilters)
+      const queryResult = await runQuerySilent(updatedFilters, updatedFields)
+      if (queryResult) {
+        assistantMsg.chartData = queryResult.data
+        assistantMsg.chartCols = queryResult.columns
+      }
+    }
+
+    setChatMessages(prev => [...prev, assistantMsg])
+  } catch (e) { console.error(e) }
+  setChatLoading(false)
+}
 
   const allFields = model ? [
     ...model.dimensions.map(d => ({ ...d, kind: 'dimension' })),
@@ -390,7 +426,39 @@ export default function Explore() {
                 color: msg.role === 'user' ? '#378ADD' : '#aaa',
                 fontFamily: 'DM Mono, monospace', fontSize: 12, lineHeight: 1.7
               }}>
-                {msg.content}
+                {msg.role === 'assistant' ? (
+  <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+    <ReactMarkdown
+      components={{
+        h1: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{children}</div>,
+        h2: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 700, fontSize: 12, marginBottom: 4, marginTop: 8 }}>{children}</div>,
+        h3: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 600, fontSize: 12, marginBottom: 4, marginTop: 6 }}>{children}</div>,
+        strong: ({children}) => <span style={{ color: '#f0ede8', fontWeight: 600 }}>{children}</span>,
+        p: ({children}) => <p style={{ margin: '4px 0', color: '#aaa' }}>{children}</p>,
+        ul: ({children}) => <ul style={{ paddingLeft: 16, margin: '4px 0', color: '#aaa' }}>{children}</ul>,
+        li: ({children}) => <li style={{ margin: '2px 0' }}>{children}</li>,
+        code: ({children}) => <code style={{ background: '#0e0e0e', padding: '1px 5px', borderRadius: 3, fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#1D9E75' }}>{children}</code>,
+      }}
+    >
+      {msg.content}
+    </ReactMarkdown>
+    {msg.chartData && msg.chartData.length > 0 && (
+      <div style={{ marginTop: 12, background: '#0e0e0e', borderRadius: 8, padding: 12 }}>
+        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#555', marginBottom: 8, textTransform: 'uppercase' }}>chart</div>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={msg.chartData.slice(0, 15)}>
+            <XAxis dataKey={msg.chartCols?.[0]} tick={{ fontSize: 9, fill: '#555' }} />
+            <YAxis tick={{ fontSize: 9, fill: '#555' }} />
+            <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, fontFamily: 'DM Mono', fontSize: 11 }} />
+            {(msg.chartCols?.slice(1) ?? []).filter(col => msg.chartData && typeof msg.chartData[0][col] === 'number').map((col, i) => (
+              <Bar key={col} dataKey={col} fill={COLORS[i % COLORS.length]} radius={[3, 3, 0, 0]} />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    )}
+  </div>
+) : msg.content}
               </div>
             </div>
           ))}

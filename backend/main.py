@@ -60,20 +60,39 @@ async def query_csv(file: UploadFile = File(...), question: str = "Give me a sum
         model="claude-sonnet-4-5",
         max_tokens=1024,
         messages=[
-            {
-                "role": "user",
-                "content": f"""You are a data analyst assistant for Mirai BI.
-                
-Here is a preview of the dataset:
+    {
+        "role": "user",
+        "content": f"""You are a data analyst for Mirai BI. Analyze this data and respond in clean markdown.
+
+Data:
 {data_preview}
 
-User question: {question}
+Question: {question}
 
-Provide a concise, insightful analysis. Highlight trends, anomalies, or key takeaways."""
-            }
-        ]
-    )
+Format your response EXACTLY like this:
 
+## Summary
+One sentence summary of the key finding.
+
+## Key Highlights
+- **[Metric]**: [insight]
+- **[Metric]**: [insight]
+- **[Metric]**: [insight]
+
+## Trends
+Brief paragraph about trends, using **bold** for important numbers and platform names.
+
+## Recommendation
+One actionable recommendation in bold.
+
+Rules:
+- Use **bold** for all numbers, platform names, and key metrics
+- Keep each bullet point to one line
+- Maximum 4 bullet points in Key Highlights
+- Be specific with numbers from the data
+- Never use generic AI phrases like "it's worth noting" or "in conclusion\""""
+    }
+])
     return {
         "insight": message.content[0].text,
         "rows": len(df),

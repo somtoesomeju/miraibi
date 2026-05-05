@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
-import { useState, useCallback } from 'react'
+import html2canvas from 'html2canvas'
+import { useState, useCallback, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import axios from 'axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -12,7 +13,7 @@ interface Measure { name: string; type: string; field: string; aggregation: stri
 interface Model { model: string; dimensions: Dimension[]; measures: Measure[]; calculations: any[] }
 interface Filter { field: string; operator: string; value: string }
 interface Calculation { name: string; expression: string }
-interface ChatMessage { 
+interface ChatMessage {
   role: string
   content: string
   chartData?: any[]
@@ -28,6 +29,7 @@ export default function Explore() {
   const [modelYaml, setModelYaml] = useState('')
   const [showYaml, setShowYaml] = useState(false)
   const [showChat, setShowChat] = useState(false)
+  const [showReport, setShowReport] = useState(false)
   const [selectedFields, setSelectedFields] = useState<string[]>([])
   const [filters, setFilters] = useState<Filter[]>([])
   const [calculations, setCalculations] = useState<Calculation[]>([])
@@ -38,6 +40,7 @@ export default function Explore() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
+  const chartRef = useRef<HTMLDivElement>(null)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (!acceptedFiles.length) return
@@ -99,65 +102,99 @@ export default function Explore() {
   }
 
   const runQuerySilent = async (overrideFilters?: Filter[], overrideFields?: string[]) => {
-  if (!file) return null
-  try {
-    const form = new FormData()
-    form.append('file', file)
-    form.append('model_yaml', modelYaml)
-    form.append('selected_fields', JSON.stringify(overrideFields ?? selectedFields))
-    form.append('filters', JSON.stringify(overrideFilters ?? filters))
-    form.append('calculations', JSON.stringify(calculations))
-    const res = await axios.post(`${API}/explore/query`, form)
-    return { data: res.data.data, columns: res.data.columns }
-  } catch (e) { 
-    console.error(e)
-    return null
+    if (!file) return null
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('model_yaml', modelYaml)
+      form.append('selected_fields', JSON.stringify(overrideFields ?? selectedFields))
+      form.append('filters', JSON.stringify(overrideFilters ?? filters))
+      form.append('calculations', JSON.stringify(calculations))
+      const res = await axios.post(`${API}/explore/query`, form)
+      return { data: res.data.data, columns: res.data.columns }
+    } catch (e) {
+      console.error(e)
+      return null
+    }
   }
-}
 
-const sendMessage = async () => {
-  if (!file || !chatInput.trim()) return
-  const userMsg: ChatMessage = { role: 'user', content: chatInput }
-  setChatMessages(prev => [...prev, userMsg])
-  setChatInput('')
-  setChatLoading(true)
-  try {
-    const form = new FormData()
-    form.append('file', file)
-    form.append('model_yaml', modelYaml)
-    form.append('selected_fields', JSON.stringify(selectedFields))
-    form.append('filters', JSON.stringify(filters))
-    form.append('calculations', JSON.stringify(calculations))
-    form.append('messages', JSON.stringify([...chatMessages, userMsg]))
-    form.append('user_message', userMsg.content)
-    const res = await axios.post(`${API}/explore/chat`, form)
+  const downloadPNG = async () => {
+    if (!chartRef.current) return
+    const canvas = await html2canvas(chartRef.current, { backgroundColor: '#141414' })
+    const link = document.createElement('a')
+    link.download = 'miraibi-chart.png'
+    link.href = canvas.toDataURL()
+    link.click()
+  }
 
-    const assistantMsg: ChatMessage = { 
-      role: 'assistant', 
-      content: res.data.reply,
-    }
+  const downloadCSV = () => {
+    if (!results.length) return
+    const headers = resultCols.join(',')
+    const rows = results.map(row => resultCols.map(col => row[col]).join(','))
+    const csv = [headers, ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const link = document.createElement('a')
+    link.download = 'miraibi-data.csv'
+    link.href = URL.createObjectURL(blob)
+    link.click()
+  }
 
-    if (res.data.new_fields || res.data.new_filters) {
-      const updatedFields = res.data.new_fields ?? selectedFields
-      const updatedFilters = res.data.new_filters ?? filters
-      setSelectedFields(updatedFields)
-      setFilters(updatedFilters)
-      const queryResult = await runQuerySilent(updatedFilters, updatedFields)
-      if (queryResult) {
-        assistantMsg.chartData = queryResult.data
-        assistantMsg.chartCols = queryResult.columns
+  const sendMessage = async () => {
+    if (!file || !chatInput.trim()) return
+    const userMsg: ChatMessage = { role: 'user', content: chatInput }
+    setChatMessages(prev => [...prev, userMsg])
+    setChatInput('')
+    setChatLoading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('model_yaml', modelYaml)
+      form.append('selected_fields', JSON.stringify(selectedFields))
+      form.append('filters', JSON.stringify(filters))
+      form.append('calculations', JSON.stringify(calculations))
+      form.append('messages', JSON.stringify([...chatMessages, userMsg]))
+      form.append('user_message', userMsg.content)
+      const res = await axios.post(`${API}/explore/chat`, form)
+      console.log('Chat response:', res.data)
+
+      const assistantMsg: ChatMessage = {
+        role: 'assistant',
+        content: res.data.reply,
       }
-    }
 
-    setChatMessages(prev => [...prev, assistantMsg])
-  } catch (e) { console.error(e) }
-  setChatLoading(false)
-}
+      if (res.data.new_fields || res.data.new_filters) {
+        const updatedFields = res.data.new_fields ?? selectedFields
+        const updatedFilters = res.data.new_filters ?? filters
+        setSelectedFields(updatedFields)
+        setFilters(updatedFilters)
+        const queryResult = await runQuerySilent(updatedFilters, updatedFields)
+        if (queryResult) {
+          assistantMsg.chartData = queryResult.data
+          assistantMsg.chartCols = queryResult.columns
+        }
+      }
+
+      setChatMessages(prev => [...prev, assistantMsg])
+    } catch (e) { console.error(e) }
+    setChatLoading(false)
+  }
 
   const allFields = model ? [
     ...model.dimensions.map(d => ({ ...d, kind: 'dimension' })),
     ...model.measures.map(m => ({ ...m, kind: 'measure' }))
   ] : []
+
+  const mdComponents = {
+    h2: ({children}: any) => <div style={{ color: '#f0ede8', fontWeight: 700, fontSize: 11, marginBottom: 8, marginTop: 12, fontFamily: 'DM Mono, monospace', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{children}</div>,
+    h3: ({children}: any) => <div style={{ color: '#f0ede8', fontWeight: 600, fontSize: 12, marginBottom: 6, marginTop: 10 }}>{children}</div>,
+    strong: ({children}: any) => <span style={{ color: '#f0ede8', fontWeight: 600 }}>{children}</span>,
+    p: ({children}: any) => <p style={{ margin: '4px 0', color: '#aaa', fontSize: 13 }}>{children}</p>,
+    ul: ({children}: any) => <ul style={{ paddingLeft: 16, margin: '6px 0', color: '#aaa' }}>{children}</ul>,
+    li: ({children}: any) => <li style={{ margin: '4px 0', fontSize: 13 }}>{children}</li>,
+    table: ({children}: any) => <table style={{ width: '100%', borderCollapse: 'collapse' as const, margin: '8px 0', fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{children}</table>,
+    th: ({children}: any) => <th style={{ textAlign: 'left' as const, padding: '6px 10px', borderBottom: '0.5px solid #2a2a2a', color: '#555', fontWeight: 400 }}>{children}</th>,
+    td: ({children}: any) => <td style={{ padding: '6px 10px', borderBottom: '0.5px solid #1a1a1a', color: '#aaa' }}>{children}</td>,
+  }
 
   const s = {
     panel: { background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20, marginBottom: 12 },
@@ -303,25 +340,36 @@ const sendMessage = async () => {
 
             {results.length > 0 && (
               <>
+                {/* Chart with download buttons */}
                 <div style={s.panel}>
-                  <span style={s.label}>results — {results.length} rows</span>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={results.slice(0, 20)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-<XAxis 
-  dataKey={resultCols.find(col => results.length > 0 && typeof results[0][col] === 'string') ?? resultCols[0]} 
-  tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} 
-/>                      <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
-                      {resultCols.slice(1).filter(col => 
-  results.length > 0 && typeof results[0][col] === 'number'
-).map((col, i) => (
-  <Bar key={col} dataKey={col} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />
-))}
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <span style={{ ...s.label, marginBottom: 0 }}>results — {results.length} rows</span>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={downloadCSV} style={s.btn('#555')}>↓ CSV</button>
+                      <button onClick={downloadPNG} style={s.btn('#1D9E75')}>↓ PNG</button>
+                    </div>
+                  </div>
+                  <div ref={chartRef} style={{ background: '#141414', padding: 8, borderRadius: 8 }}>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={results.slice(0, 20)}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+                        <XAxis
+                          dataKey={resultCols.find(col => results.length > 0 && typeof results[0][col] === 'string') ?? resultCols[0]}
+                          tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }}
+                        />
+                        <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
+                        <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
+                        {resultCols.slice(1).filter(col =>
+                          results.length > 0 && typeof results[0][col] === 'number'
+                        ).map((col, i) => (
+                          <Bar key={col} dataKey={col} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
+                {/* Data table */}
                 <div style={{ ...s.panel, overflowX: 'auto' }}>
                   <span style={s.label}>data table</span>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
@@ -344,12 +392,22 @@ const sendMessage = async () => {
                   </table>
                 </div>
 
+                {/* AI Insight */}
                 <div style={{ ...s.panel, borderLeft: '2px solid #1D9E75' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <Sparkles size={14} color="#1D9E75" />
-                    <span style={{ ...s.label, marginBottom: 0 }}>mirai ai insight</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Sparkles size={14} color="#1D9E75" />
+                      <span style={{ ...s.label, marginBottom: 0 }}>mirai ai insight</span>
+                    </div>
+                    <button onClick={() => setShowReport(!showReport)} style={s.btn('#1D9E75')}>
+                      {showReport ? 'hide report' : 'view full report ↗'}
+                    </button>
                   </div>
-                  <p style={{ fontSize: 13, color: '#aaa', lineHeight: 1.8 }}>{insight}</p>
+                  <div style={{ fontSize: 13, color: '#aaa', lineHeight: 1.8 }}>
+                    <ReactMarkdown components={mdComponents}>
+                      {showReport ? insight : insight.split('\n').slice(0, 8).join('\n')}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </>
             )}
@@ -372,7 +430,7 @@ const sendMessage = async () => {
       {/* Chat drawer */}
       <div style={{
         position: 'fixed', top: 0, right: showChat ? 0 : '-420px',
-      pointerEvents: showChat ? 'all' : 'none',
+        pointerEvents: showChat ? 'all' : 'none',
         width: 400, height: '100vh', background: '#0e0e0e',
         borderLeft: '0.5px solid #2a2a2a', transition: 'right 0.3s ease',
         zIndex: 100, display: 'flex', flexDirection: 'column', padding: '1.5rem'
@@ -427,38 +485,27 @@ const sendMessage = async () => {
                 fontFamily: 'DM Mono, monospace', fontSize: 12, lineHeight: 1.7
               }}>
                 {msg.role === 'assistant' ? (
-  <div style={{ fontSize: 12, lineHeight: 1.8 }}>
-    <ReactMarkdown
-      components={{
-        h1: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{children}</div>,
-        h2: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 700, fontSize: 12, marginBottom: 4, marginTop: 8 }}>{children}</div>,
-        h3: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 600, fontSize: 12, marginBottom: 4, marginTop: 6 }}>{children}</div>,
-        strong: ({children}) => <span style={{ color: '#f0ede8', fontWeight: 600 }}>{children}</span>,
-        p: ({children}) => <p style={{ margin: '4px 0', color: '#aaa' }}>{children}</p>,
-        ul: ({children}) => <ul style={{ paddingLeft: 16, margin: '4px 0', color: '#aaa' }}>{children}</ul>,
-        li: ({children}) => <li style={{ margin: '2px 0' }}>{children}</li>,
-        code: ({children}) => <code style={{ background: '#0e0e0e', padding: '1px 5px', borderRadius: 3, fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#1D9E75' }}>{children}</code>,
-      }}
-    >
-      {msg.content.replace(/<query_update>[\s\S]*?<\/query_update>/g, '').trim()}
-    </ReactMarkdown>
-    {msg.chartData && msg.chartData.length > 0 && (
-      <div style={{ marginTop: 12, background: '#0e0e0e', borderRadius: 8, padding: 12 }}>
-        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#555', marginBottom: 8, textTransform: 'uppercase' }}>chart</div>
-        <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={msg.chartData.slice(0, 15)}>
-            <XAxis dataKey={msg.chartCols?.[0]} tick={{ fontSize: 9, fill: '#555' }} />
-            <YAxis tick={{ fontSize: 9, fill: '#555' }} />
-            <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, fontFamily: 'DM Mono', fontSize: 11 }} />
-            {(msg.chartCols?.slice(1) ?? []).filter(col => msg.chartData && typeof msg.chartData[0][col] === 'number').map((col, i) => (
-              <Bar key={col} dataKey={col} fill={COLORS[i % COLORS.length]} radius={[3, 3, 0, 0]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    )}
-  </div>
-) : msg.content}
+                  <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                    <ReactMarkdown components={mdComponents}>
+                      {msg.content.replace(/<query_update>[\s\S]*?<\/query_update>/g, '').trim()}
+                    </ReactMarkdown>
+                    {msg.chartData && msg.chartData.length > 0 && (
+                      <div style={{ marginTop: 12, background: '#0e0e0e', borderRadius: 8, padding: 12 }}>
+                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#555', marginBottom: 8, textTransform: 'uppercase' }}>chart</div>
+                        <ResponsiveContainer width="100%" height={160}>
+                          <BarChart data={msg.chartData.slice(0, 15)}>
+                            <XAxis dataKey={msg.chartCols?.[0]} tick={{ fontSize: 9, fill: '#555' }} />
+                            <YAxis tick={{ fontSize: 9, fill: '#555' }} />
+                            <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, fontFamily: 'DM Mono', fontSize: 11 }} />
+                            {(msg.chartCols?.slice(1) ?? []).filter(col => msg.chartData && typeof msg.chartData[0][col] === 'number').map((col, i) => (
+                              <Bar key={col} dataKey={col} fill={COLORS[i % COLORS.length]} radius={[3, 3, 0, 0]} />
+                            ))}
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </div>
+                ) : msg.content}
               </div>
             </div>
           ))}

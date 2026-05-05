@@ -195,7 +195,7 @@ Rules for selected_fields:
 - Use EXACT field names from the lists above
 - For time trends use "month" as dimension
 - For platform comparisons use "platform" as dimension
-- filters format: [{"field": "x", "operator": "greater_than", "value": "y"}]
+- filters format: [{{"field": "x", "operator": "greater_than", "value": "y"}}]
 - operators ONLY: equals, not_equals, greater_than, less_than, contains
 - For date ranges use greater_than and less_than with values like "2024-10"
 

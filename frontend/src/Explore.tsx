@@ -272,12 +272,16 @@ export default function Explore() {
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={results.slice(0, 20)}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-                      <XAxis dataKey={resultCols[0]} tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-                      <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
+<XAxis 
+  dataKey={resultCols.find(col => results.length > 0 && typeof results[0][col] === 'string') ?? resultCols[0]} 
+  tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} 
+/>                      <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
                       <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
-                      {resultCols.slice(1).map((col, i) => (
-                        <Bar key={col} dataKey={col} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />
-                      ))}
+                      {resultCols.slice(1).filter(col => 
+  results.length > 0 && typeof results[0][col] === 'number'
+).map((col, i) => (
+  <Bar key={col} dataKey={col} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />
+))}
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

@@ -220,18 +220,25 @@ Selected fields should be: ["month", "impressions", "clicks"]"""
     reply = response.content[0].text
 
     new_filters = None
-    if "<filter_update>" in reply:
+    new_fields = None
+
+    if "<query_update>" in reply:
         try:
-            start = reply.index("<filter_update>") + len("<filter_update>")
-            end = reply.index("</filter_update>")
-            filter_json = reply[start:end].strip()
-            parsed = json.loads(filter_json)
+            start = reply.index("<query_update>") + len("<query_update>")
+            end = reply.index("</query_update>")
+            update_json = reply[start:end].strip()
+            update_json = update_json.replace('\n', '').replace('  ', ' ')
+            parsed = json.loads(update_json)
             new_filters = parsed.get("filters")
-            reply = reply[:reply.index("<filter_update>")].strip()
-        except:
-            pass
+            new_fields = parsed.get("selected_fields")
+            reply = reply[:reply.index("<query_update>")].strip()
+            print(f"DEBUG parsed fields: {new_fields}, filters: {new_filters}")
+        except Exception as e:
+            print(f"DEBUG parse error: {e}")
 
     return {
         "reply": reply,
-        "new_filters": new_filters
-    }# force redeploy Mon May  4 21:20:27 UTC 2026
+        "new_filters": new_filters,
+        "new_fields": new_fields
+    }
+    # force redeploy Mon May  4 21:20:27 UTC 2026

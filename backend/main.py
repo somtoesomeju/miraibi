@@ -93,10 +93,10 @@ async def generate_model(file: UploadFile = File(...)):
 @app.post("/explore/query")
 async def explore_query(
     file: UploadFile = File(...),
-    model_yaml: str = "",
-    selected_fields: str = "[]",
-    filters: str = "[]",
-    calculations: str = "[]"
+    model_yaml: str = Form(""),
+    selected_fields: str = Form("[]"),
+    filters: str = Form("[]"),
+    calculations: str = Form("[]")
 ):
     contents = await file.read()
     df = pd.read_csv(io.BytesIO(contents))

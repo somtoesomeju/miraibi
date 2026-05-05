@@ -9,7 +9,7 @@ import io
 import os
 import yaml
 import json
-from compiler import auto_generate_model, run_explore
+from compiler import auto_generate_model, compile_query, run_explore
 
 load_dotenv()
 
@@ -109,8 +109,13 @@ async def explore_query(
     filter_list = json.loads(filters)
     calc_list = json.loads(calculations)
 
+    from compiler import compile_query
+    import yaml as _yaml
+    _model = _yaml.safe_load(model_yaml)
+    _sql = compile_query(_model, selected, filter_list, calc_list)
+    print(f"DEBUG SQL: {_sql}")
+    print(f"DEBUG selected: {selected}")
     result = run_explore(df, model_yaml, selected, filter_list, calc_list)
-
     message = client.messages.create(
         model="claude-sonnet-4-5",
         max_tokens=1024,

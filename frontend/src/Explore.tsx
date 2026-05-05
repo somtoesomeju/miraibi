@@ -440,7 +440,7 @@ const sendMessage = async () => {
         code: ({children}) => <code style={{ background: '#0e0e0e', padding: '1px 5px', borderRadius: 3, fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#1D9E75' }}>{children}</code>,
       }}
     >
-      {msg.content}
+      {msg.content.replace(/<query_update>[\s\S]*?<\/query_update>/g, '').trim()}
     </ReactMarkdown>
     {msg.chartData && msg.chartData.length > 0 && (
       <div style={{ marginTop: 12, background: '#0e0e0e', borderRadius: 8, padding: 12 }}>

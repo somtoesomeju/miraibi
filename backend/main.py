@@ -195,7 +195,9 @@ Rules for selected_fields:
 - Use EXACT field names from the lists above
 - For time trends use "month" as dimension
 - For platform comparisons use "platform" as dimension
-- filters format: [{{"field": "x", "operator": "equals", "value": "y"}}]
+- filters format: [{"field": "x", "operator": "greater_than", "value": "y"}]
+- operators ONLY: equals, not_equals, greater_than, less_than, contains
+- For date ranges use greater_than and less_than with values like "2024-10"
 
 Example - if user asks "show me revenue by platform":
 Selected fields should be: ["platform", "revenue_attributed"]

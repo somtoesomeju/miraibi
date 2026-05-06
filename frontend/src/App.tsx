@@ -1,3 +1,4 @@
+import ReactMarkdown from 'react-markdown'
 import Explore from './Explore'
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
@@ -135,47 +136,71 @@ export default function App() {
             </div>
 
             {/* Charts */}
-            {numericCols.length >= 2 && categoryCols.length >= 1 && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: '1.5rem' }}>
-                <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>{numericCols[0]} by {categoryCols[0]}</div>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={chartData.slice(0, 20)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-                      <XAxis dataKey={categoryCols[0]} tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-                      <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
-                      <Bar dataKey={numericCols[0]} fill="#1D9E75" radius={[4,4,0,0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+{categoryCols.length >= 1 && (
+  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: '1.5rem' }}>
+    <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20 }}>
+      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
+        {numericCols.length >= 1 ? `${numericCols[0]} by ${categoryCols[0]}` : `${categoryCols[0]} distribution`}
+      </div>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={numericCols.length >= 1 ? chartData.slice(0, 20) :
+          Object.entries(chartData.reduce((acc: any, row) => {
+            const key = row[categoryCols[0]] as string
+            acc[key] = (acc[key] || 0) + 1
+            return acc
+          }, {})).map(([k, v]) => ({ [categoryCols[0]]: k, count: v }))
+        }>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+          <XAxis dataKey={categoryCols[0]} tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
+          <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
+          <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
+          <Bar dataKey={numericCols.length >= 1 ? numericCols[0] : 'count'} fill="#1D9E75" radius={[4,4,0,0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
 
-                <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>trends — {numericCols.slice(0, 3).join(' · ')}</div>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={chartData.slice(0, 20)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-                      <XAxis dataKey={categoryCols[0]} tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-                      <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-                      <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
-                      <Legend wrapperStyle={{ fontFamily: 'DM Mono', fontSize: 11, color: '#555' }} />
-                      {numericCols.slice(0, 3).map((col, i) => (
-                        <Line key={col} type="monotone" dataKey={col} stroke={COLORS[i]} strokeWidth={2} dot={false} />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
+    <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20 }}>
+      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>trends — {numericCols.slice(0, 3).join(' · ')}</div>
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={chartData.slice(0, 20)}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+          <XAxis dataKey={categoryCols[0]} tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
+          <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
+          <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
+          <Legend wrapperStyle={{ fontFamily: 'DM Mono', fontSize: 11, color: '#555' }} />
+          {numericCols.slice(0, 3).map((col, i) => (
+            <Line key={col} type="monotone" dataKey={col} stroke={COLORS[i]} strokeWidth={2} dot={false} />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+)}
 
             {/* AI Insight */}
-            <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderLeft: '2px solid #1D9E75', borderRadius: 12, padding: 24, marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <Sparkles size={14} color="#1D9E75" />
-                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mirai AI insight</span>
-              </div>
-              <p style={{ fontSize: 14, color: '#aaa', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{insight.insight}</p>
-            </div>
+<div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderLeft: '2px solid #1D9E75', borderRadius: 12, padding: 24, marginBottom: '1.5rem' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+    <Sparkles size={14} color="#1D9E75" />
+    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Mirai AI insight</span>
+  </div>
+  <div style={{ fontSize: 14, color: '#aaa', lineHeight: 1.8 }}>
+    <ReactMarkdown
+      components={{
+        h2: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 700, fontSize: 11, marginBottom: 8, marginTop: 12, fontFamily: 'DM Mono, monospace', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{children}</div>,
+        h3: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 600, fontSize: 12, marginBottom: 6, marginTop: 10 }}>{children}</div>,
+        strong: ({children}) => <span style={{ color: '#f0ede8', fontWeight: 600 }}>{children}</span>,
+        p: ({children}) => <p style={{ margin: '4px 0', color: '#aaa', fontSize: 14 }}>{children}</p>,
+        ul: ({children}) => <ul style={{ paddingLeft: 16, margin: '6px 0', color: '#aaa' }}>{children}</ul>,
+        li: ({children}) => <li style={{ margin: '4px 0', fontSize: 14 }}>{children}</li>,
+        table: ({children}) => <table style={{ width: '100%', borderCollapse: 'collapse' as const, margin: '8px 0', fontSize: 13, fontFamily: 'DM Mono, monospace' }}>{children}</table>,
+        th: ({children}) => <th style={{ textAlign: 'left' as const, padding: '6px 10px', borderBottom: '0.5px solid #2a2a2a', color: '#555', fontWeight: 400 }}>{children}</th>,
+        td: ({children}) => <td style={{ padding: '6px 10px', borderBottom: '0.5px solid #1a1a1a', color: '#aaa' }}>{children}</td>,
+      }}
+    >
+      {insight.insight}
+    </ReactMarkdown>
+  </div>
+</div>
 
             {/* Ask follow-up */}
             <div style={{ display: 'flex', gap: 8 }}>
@@ -201,3 +226,4 @@ export default function App() {
     </div>
   )
 } 
+ 

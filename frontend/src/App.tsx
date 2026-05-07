@@ -38,9 +38,6 @@ const [dashChatMessages, setDashChatMessages] = useState<{role: string, content:
     try {
       const form = new FormData()
       form.append('file', f)
-      const [modelYaml, setModelYaml] = useState('')
-const [smartFilters, setSmartFilters] = useState<any[]>([])
-const [smartFields, setSmartFields] = useState<string[]>([])
       const res = await axios.post<Insight>(
   `${API}/query?question=Give me a full analysis of this dataset with key trends and recommendations`,
   form

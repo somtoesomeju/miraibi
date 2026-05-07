@@ -147,7 +147,13 @@ setModelYaml(modelRes.data.yaml)
     {insight && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{insight.rows} rows · {insight.columns.length} cols</span>}
   </div>
 </div>
-      {page === 'explore' ? <Explore /> : (<>
+      {page === 'explore' ? (
+  <Explore 
+    sharedFile={file} 
+    sharedModelYaml={modelYaml}
+    onFileChange={(f, yaml) => { setFile(f); setModelYaml(yaml) }}
+  />
+) : (<>
         {/* Upload */}
         <div {...getRootProps()} style={{ border: `0.5px dashed ${isDragActive ? '#1D9E75' : '#2a2a2a'}`, borderRadius: 12, padding: '2.5rem', textAlign: 'center', marginBottom: '2rem', background: isDragActive ? 'rgba(29,158,117,0.05)' : '#141414', cursor: 'pointer', transition: 'all 0.2s' }}>
           <input {...getInputProps()} />

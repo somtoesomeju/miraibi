@@ -1,3 +1,4 @@
+import { useState, useCallback, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import html2canvas from 'html2canvas'
 import { useState, useCallback, useRef } from 'react'
@@ -23,10 +24,16 @@ interface ChatMessage {
 const OPERATORS = ['equals', 'not_equals', 'greater_than', 'less_than', 'contains']
 const COLORS = ['#1D9E75', '#378ADD', '#BA7517', '#7F77DD', '#D85A30']
 
-export default function Explore() {
-  const [file, setFile] = useState<File | null>(null)
+interface ExploreProps {
+  sharedFile?: File | null
+  sharedModelYaml?: string
+  onFileChange?: (file: File, yaml: string) => void
+}
+
+export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: ExploreProps) {
+  const [file, setFile] = useState<File | null>(sharedFile ?? null)
   const [model, setModel] = useState<Model | null>(null)
-  const [modelYaml, setModelYaml] = useState('')
+  const [modelYaml, setModelYaml] = useState(sharedModelYaml ?? '')
   const [showYaml, setShowYaml] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [showReport, setShowReport] = useState(false)
@@ -42,20 +49,38 @@ export default function Explore() {
   const [chatLoading, setChatLoading] = useState(false)
   const chartRef = useRef<HTMLDivElement>(null)
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!acceptedFiles.length) return
-    const f = acceptedFiles[0]
-    setFile(f)
-    try {
-      const form = new FormData()
-      form.append('file', f)
-      const res = await axios.post(`${API}/explore/model`, form)
-      setModel(res.data.model)
-      setModelYaml(res.data.yaml)
-    } catch (e) {
-      console.error('Upload error:', e)
+  useEffect(() => {
+  if (sharedFile && sharedFile !== file) {
+    setFile(sharedFile)
+    if (sharedModelYaml) {
+      setModelYaml(sharedModelYaml)
+      // Parse the yaml to set the model
+      const parseModel = async () => {
+        const form = new FormData()
+        form.append('file', sharedFile)
+        const res = await axios.post(`${API}/explore/model`, form)
+        setModel(res.data.model)
+      }
+      parseModel()
     }
-  }, [])
+  }
+}, [sharedFile])
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+  if (!acceptedFiles.length) return
+  const f = acceptedFiles[0]
+  setFile(f)
+  try {
+    const form = new FormData()
+    form.append('file', f)
+    const res = await axios.post(`${API}/explore/model`, form)
+    setModel(res.data.model)
+    setModelYaml(res.data.yaml)
+    if (onFileChange) onFileChange(f, res.data.yaml)
+  } catch (e) {
+    console.error('Upload error:', e)
+  }
+}, [onFileChange])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

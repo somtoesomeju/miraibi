@@ -51,17 +51,14 @@ export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: E
   useEffect(() => {
   if (sharedFile && sharedFile !== file) {
     setFile(sharedFile)
-    if (sharedModelYaml) {
-      setModelYaml(sharedModelYaml)
-      // Parse the yaml to set the model
-      const parseModel = async () => {
-        const form = new FormData()
-        form.append('file', sharedFile)
-        const res = await axios.post(`${API}/explore/model`, form)
-        setModel(res.data.model)
-      }
-      parseModel()
+    const parseModel = async () => {
+      const form = new FormData()
+      form.append('file', sharedFile)
+      const res = await axios.post(`${API}/explore/model`, form)
+      setModel(res.data.model)
+      setModelYaml(res.data.yaml)
     }
+    parseModel()
   }
 }, [sharedFile])
 

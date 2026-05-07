@@ -19,6 +19,7 @@ interface ChartRow {
 }
 
 export default function App() {
+  const [dashChatMessages, setDashChatMessages] = useState<{role: string, content: string}[]>([])
   const [page, setPage] = useState<'dashboard' | 'explore'>('dashboard')
   const [file, setFile] = useState<File | null>(null)
   const [insight, setInsight] = useState<Insight | null>(null)
@@ -74,8 +75,10 @@ setModelYaml(modelRes.data.yaml)
   const handleAsk = async () => {
   if (!file || !question.trim()) return
   setAskLoading(true)
+  const userMsg = { role: 'user', content: question }
+  setDashChatMessages(prev => [...prev, userMsg])
+  setQuestion('')
   try {
-    // Send to explore chat endpoint to get smart field/filter suggestions
     const chatForm = new FormData()
     chatForm.append('file', file)
     chatForm.append('model_yaml', modelYaml)
@@ -86,7 +89,6 @@ setModelYaml(modelRes.data.yaml)
     chatForm.append('user_message', question)
     const chatRes = await axios.post(`${API}/explore/chat`, chatForm)
 
-    // Run the actual query with new fields/filters
     let updatedFields = smartFields
     let updatedFilters = smartFilters
     if (chatRes.data.new_fields) {
@@ -97,6 +99,9 @@ setModelYaml(modelRes.data.yaml)
       updatedFilters = chatRes.data.new_filters
       setSmartFilters(updatedFilters)
     }
+
+    const cleanReply = chatRes.data.reply.replace(/<query_update>[\s\S]*?<\/query_update>/g, '').trim()
+    setDashChatMessages(prev => [...prev, { role: 'assistant', content: cleanReply }])
 
     if (updatedFields.length > 0) {
       const queryForm = new FormData()
@@ -112,16 +117,9 @@ setModelYaml(modelRes.data.yaml)
         columns: queryRes.data.columns,
       })
       setChartData(queryRes.data.data as ChartRow[])
-    } else {
-      // Fallback: just use the chat reply as insight
-      setInsight(prev => prev ? {
-        ...prev,
-        insight: chatRes.data.reply.replace(/<query_update>[\s\S]*?<\/query_update>/g, '').trim()
-      } : null)
     }
   } catch (e) { console.error(e) }
   setAskLoading(false)
-  setQuestion('')
 }
   const numericCols = insight?.columns.filter(c =>
     chartData.length > 0 && typeof chartData[0][c] === 'number'
@@ -251,22 +249,66 @@ setModelYaml(modelRes.data.yaml)
 </div>
 
             {/* Ask follow-up */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                value={question}
-                onChange={e => setQuestion(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAsk()}
-                placeholder="Ask a follow-up question about your data..."
-                style={{ flex: 1, background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '10px 14px', color: '#f0ede8', fontFamily: 'Syne, sans-serif', fontSize: 14, outline: 'none' }}
-              />
-              <button
-                onClick={handleAsk}
-                disabled={askLoading}
-                style={{ background: 'transparent', border: '0.5px solid #1D9E75', borderRadius: 8, padding: '10px 20px', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12, cursor: 'pointer' }}
+<div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20, marginTop: '1rem' }}>
+  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>ask mirai about your data</div>
+
+  {/* Chat history */}
+  {dashChatMessages.length > 0 && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16, maxHeight: 400, overflowY: 'auto' }}>
+      {dashChatMessages.map((msg, i) => (
+        <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+          <div style={{
+            maxWidth: '85%', padding: '10px 14px',
+            borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+            background: msg.role === 'user' ? 'rgba(29,158,117,0.12)' : '#0e0e0e',
+            border: `0.5px solid ${msg.role === 'user' ? '#1D9E75' : '#2a2a2a'}`,
+            color: msg.role === 'user' ? '#1D9E75' : '#aaa',
+            fontFamily: 'DM Mono, monospace', fontSize: 12, lineHeight: 1.7
+          }}>
+            {msg.role === 'assistant' ? (
+              <ReactMarkdown
+                components={{
+                  h2: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 700, fontSize: 11, marginBottom: 8, marginTop: 12, fontFamily: 'DM Mono, monospace', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{children}</div>,
+                  strong: ({children}) => <span style={{ color: '#f0ede8', fontWeight: 600 }}>{children}</span>,
+                  p: ({children}) => <p style={{ margin: '4px 0', color: '#aaa' }}>{children}</p>,
+                  ul: ({children}) => <ul style={{ paddingLeft: 16, margin: '4px 0', color: '#aaa' }}>{children}</ul>,
+                  li: ({children}) => <li style={{ margin: '2px 0' }}>{children}</li>,
+                }}
               >
-                {askLoading ? 'thinking...' : 'Ask Mirai ↗'}
-              </button>
-            </div>
+                {msg.content}
+              </ReactMarkdown>
+            ) : msg.content}
+          </div>
+        </div>
+      ))}
+      {askLoading && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+          <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 2px', background: '#0e0e0e', border: '0.5px solid #2a2a2a', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+            thinking...
+          </div>
+        </div>
+      )}
+    </div>
+  )}
+
+  {/* Input */}
+  <div style={{ display: 'flex', gap: 8 }}>
+    <input
+      value={question}
+      onChange={e => setQuestion(e.target.value)}
+      onKeyDown={e => e.key === 'Enter' && handleAsk()}
+      placeholder="Ask a follow-up question about your data..."
+      style={{ flex: 1, background: '#0e0e0e', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '10px 14px', color: '#f0ede8', fontFamily: 'Syne, sans-serif', fontSize: 14, outline: 'none' }}
+    />
+    <button
+      onClick={handleAsk}
+      disabled={askLoading}
+      style={{ background: 'transparent', border: '0.5px solid #1D9E75', borderRadius: 8, padding: '10px 20px', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12, cursor: 'pointer' }}
+    >
+      {askLoading ? 'thinking...' : 'Ask Mirai ↗'}
+    </button>
+  </div>
+</div>
           </>
         )}
         </>)}

@@ -63,17 +63,31 @@ export default function App() {
   })
 
   const handleAsk = async () => {
-    if (!file || !question.trim()) return
-    setAskLoading(true)
-    try {
-      const form = new FormData()
-      form.append('file', file)
-      const res = await axios.post<Insight>(`${API}/query?question=${encodeURIComponent(question)}`, form)
-      setInsight(res.data)
-    } catch (e) { console.error(e) }
-    setAskLoading(false)
-    setQuestion('')
-  }
+  if (!file || !question.trim()) return
+  setAskLoading(true)
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await axios.post<Insight>(`${API}/query?question=${encodeURIComponent(question)}`, form)
+    setInsight(res.data)
+    // re-parse chart data with filtered columns from response
+    const text = await file.text()
+    const rows = text.trim().split('\n')
+    const headers = rows[0].split(',')
+    const parsed = rows.slice(1).map(row => {
+      const vals = row.split(',')
+      const obj: ChartRow = {}
+      headers.forEach((h, i) => {
+        const v = vals[i]?.trim()
+        obj[h.trim()] = isNaN(Number(v)) ? v : Number(v)
+      })
+      return obj
+    })
+    setChartData(parsed)
+  } catch (e) { console.error(e) }
+  setAskLoading(false)
+  setQuestion('')
+}
 
   const numericCols = insight?.columns.filter(c =>
     chartData.length > 0 && typeof chartData[0][c] === 'number'

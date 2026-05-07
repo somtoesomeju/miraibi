@@ -27,6 +27,10 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [question, setQuestion] = useState('')
   const [askLoading, setAskLoading] = useState(false)
+  const [modelYaml, setModelYaml] = useState('')
+  const [smartFilters, setSmartFilters] = useState<any[]>([])
+  const [smartFields, setSmartFields] = useState<string[]>([])
+  const [dashChatMessages, setDashChatMessages] = useState<{role: string, content: string}[]>([])
 
   const onDrop = useCallback(async (files: File[]) => {
     const f = files[0]

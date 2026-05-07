@@ -143,13 +143,13 @@ export default function App() {
         {numericCols.length >= 1 ? `${numericCols[0]} by ${categoryCols[0]}` : `${categoryCols[0]} distribution`}
       </div>
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={numericCols.length >= 1 ? chartData.slice(0, 20) :
-          Object.entries(chartData.reduce((acc: any, row) => {
-            const key = row[categoryCols[0]] as string
-            acc[key] = (acc[key] || 0) + 1
-            return acc
-          }, {})).map(([k, v]) => ({ [categoryCols[0]]: k, count: v }))
-        }>
+        <BarChart data={(numericCols.length >= 1 ? chartData.slice(0, 20) :
+  Object.entries(chartData.reduce((acc: any, row) => {
+    const key = row[categoryCols[0]] as string
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {})).map(([k, v]) => ({ [categoryCols[0]]: k, count: v as number }))
+) as any}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
           <XAxis dataKey={categoryCols[0]} tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
           <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />

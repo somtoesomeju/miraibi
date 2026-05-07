@@ -19,18 +19,17 @@ interface ChartRow {
 }
 
 export default function App() {
-  const [dashChatMessages, setDashChatMessages] = useState<{role: string, content: string}[]>([])
-  const [page, setPage] = useState<'dashboard' | 'explore'>('dashboard')
-  const [file, setFile] = useState<File | null>(null)
-  const [insight, setInsight] = useState<Insight | null>(null)
-  const [chartData, setChartData] = useState<ChartRow[]>([])
-  const [loading, setLoading] = useState(false)
-  const [question, setQuestion] = useState('')
-  const [askLoading, setAskLoading] = useState(false)
-  const [modelYaml, setModelYaml] = useState('')
-  const [smartFilters, setSmartFilters] = useState<any[]>([])
-  const [smartFields, setSmartFields] = useState<string[]>([])
-  const [dashChatMessages, setDashChatMessages] = useState<{role: string, content: string}[]>([])
+const [page, setPage] = useState<'dashboard' | 'explore'>('dashboard')
+const [file, setFile] = useState<File | null>(null)
+const [insight, setInsight] = useState<Insight | null>(null)
+const [chartData, setChartData] = useState<ChartRow[]>([])
+const [loading, setLoading] = useState(false)
+const [question, setQuestion] = useState('')
+const [askLoading, setAskLoading] = useState(false)
+const [modelYaml, setModelYaml] = useState('')
+const [smartFilters, setSmartFilters] = useState<any[]>([])
+const [smartFields, setSmartFields] = useState<string[]>([])
+const [dashChatMessages, setDashChatMessages] = useState<{role: string, content: string}[]>([])
 
   const onDrop = useCallback(async (files: File[]) => {
     const f = files[0]

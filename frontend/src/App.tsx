@@ -34,11 +34,20 @@ export default function App() {
     try {
       const form = new FormData()
       form.append('file', f)
+      const [modelYaml, setModelYaml] = useState('')
+const [smartFilters, setSmartFilters] = useState<any[]>([])
+const [smartFields, setSmartFields] = useState<string[]>([])
       const res = await axios.post<Insight>(
-        `${API}/query?question=Give me a full analysis of this dataset with key trends and recommendations`,
-        form
-      )
-      setInsight(res.data)
+  `${API}/query?question=Give me a full analysis of this dataset with key trends and recommendations`,
+  form
+)
+setInsight(res.data)
+
+// Generate the explore model so we can use the chat endpoint for follow-ups
+const modelForm = new FormData()
+modelForm.append('file', f)
+const modelRes = await axios.post(`${API}/explore/model`, modelForm)
+setModelYaml(modelRes.data.yaml)
       const text = await f.text()
       const rows = text.trim().split('\n')
       const headers = rows[0].split(',')
@@ -66,29 +75,54 @@ export default function App() {
   if (!file || !question.trim()) return
   setAskLoading(true)
   try {
-    const form = new FormData()
-    form.append('file', file)
-    const res = await axios.post<Insight>(`${API}/query?question=${encodeURIComponent(question)}`, form)
-    setInsight(res.data)
-    // re-parse chart data with filtered columns from response
-    const text = await file.text()
-    const rows = text.trim().split('\n')
-    const headers = rows[0].split(',')
-    const parsed = rows.slice(1).map(row => {
-      const vals = row.split(',')
-      const obj: ChartRow = {}
-      headers.forEach((h, i) => {
-        const v = vals[i]?.trim()
-        obj[h.trim()] = isNaN(Number(v)) ? v : Number(v)
+    // Send to explore chat endpoint to get smart field/filter suggestions
+    const chatForm = new FormData()
+    chatForm.append('file', file)
+    chatForm.append('model_yaml', modelYaml)
+    chatForm.append('selected_fields', JSON.stringify(smartFields))
+    chatForm.append('filters', JSON.stringify(smartFilters))
+    chatForm.append('calculations', JSON.stringify([]))
+    chatForm.append('messages', JSON.stringify([{role: 'user', content: question}]))
+    chatForm.append('user_message', question)
+    const chatRes = await axios.post(`${API}/explore/chat`, chatForm)
+
+    // Run the actual query with new fields/filters
+    let updatedFields = smartFields
+    let updatedFilters = smartFilters
+    if (chatRes.data.new_fields) {
+      updatedFields = chatRes.data.new_fields
+      setSmartFields(updatedFields)
+    }
+    if (chatRes.data.new_filters) {
+      updatedFilters = chatRes.data.new_filters
+      setSmartFilters(updatedFilters)
+    }
+
+    if (updatedFields.length > 0) {
+      const queryForm = new FormData()
+      queryForm.append('file', file)
+      queryForm.append('model_yaml', modelYaml)
+      queryForm.append('selected_fields', JSON.stringify(updatedFields))
+      queryForm.append('filters', JSON.stringify(updatedFilters))
+      queryForm.append('calculations', JSON.stringify([]))
+      const queryRes = await axios.post(`${API}/explore/query`, queryForm)
+      setInsight({
+        insight: queryRes.data.insight,
+        rows: queryRes.data.rows,
+        columns: queryRes.data.columns,
       })
-      return obj
-    })
-    setChartData(parsed)
+      setChartData(queryRes.data.data as ChartRow[])
+    } else {
+      // Fallback: just use the chat reply as insight
+      setInsight(prev => prev ? {
+        ...prev,
+        insight: chatRes.data.reply.replace(/<query_update>[\s\S]*?<\/query_update>/g, '').trim()
+      } : null)
+    }
   } catch (e) { console.error(e) }
   setAskLoading(false)
   setQuestion('')
 }
-
   const numericCols = insight?.columns.filter(c =>
     chartData.length > 0 && typeof chartData[0][c] === 'number'
   ) ?? []

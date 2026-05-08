@@ -30,19 +30,61 @@ const [modelYaml, setModelYaml] = useState('')
 const [smartFilters, setSmartFilters] = useState<any[]>([])
 const [smartFields, setSmartFields] = useState<string[]>([])
 const [dashChatMessages, setDashChatMessages] = useState<{role: string, content: string}[]>([])
+const [mode, setMode] = useState<'select' | 'ai' | 'custom'>('select')
 
   const onDrop = useCallback(async (files: File[]) => {
-    const f = files[0]
-    setFile(f)
-    setLoading(true)
-    try {
-      const form = new FormData()
-      form.append('file', f)
-      const res = await axios.post<Insight>(
-  `${API}/query?question=Give me a full analysis of this dataset with key trends and recommendations`,
-  form
-)
-setInsight(res.data)
+  const f = files[0]
+  setFile(f)
+  setLoading(true)
+  setMode('select')
+  try {
+    // Just generate the explore model for both modes to use
+    const modelForm = new FormData()
+    modelForm.append('file', f)
+    const modelRes = await axios.post(`${API}/explore/model`, modelForm)
+    setModelYaml(modelRes.data.yaml)
+
+    // Parse CSV for chart data (used by both modes)
+    const text = await f.text()
+    const rows = text.trim().split('\n')
+    const headers = rows[0].split(',')
+    const parsed = rows.slice(1).map(row => {
+      const vals = row.split(',')
+      const obj: ChartRow = {}
+      headers.forEach((h, i) => {
+        const v = vals[i]?.trim()
+        obj[h.trim()] = isNaN(Number(v)) ? v : Number(v)
+      })
+      return obj
+    })
+    setChartData(parsed)
+  } catch (e) {
+    console.error(e)
+  }
+  setLoading(false)
+}, [])
+
+const runAIAnalysis = async () => {
+  if (!file) return
+  setMode('ai')
+  setLoading(true)
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await axios.post<Insight>(
+      `${API}/query?question=Give me a full analysis of this dataset with key trends and recommendations`,
+      form
+    )
+    setInsight(res.data)
+  } catch (e) {
+    console.error(e)
+  }
+  setLoading(false)
+}
+
+const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  onDrop, accept: { 'text/csv': ['.csv'] }, multiple: false
+})
 
 // Generate the explore model so we can use the chat endpoint for follow-ups
 const modelForm = new FormData()
@@ -144,7 +186,14 @@ setModelYaml(modelRes.data.yaml)
     <button onClick={() => setPage('dashboard')} style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 12, color: page === 'dashboard' ? '#1D9E75' : '#555', cursor: 'pointer' }}>dashboard</button>
     <button onClick={() => setPage('explore')} style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 12, color: page === 'explore' ? '#1D9E75' : '#555', cursor: 'pointer' }}>explore</button>
     {file && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{file.name}</span>}
-    {insight && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{insight.rows} rows · {insight.columns.length} cols</span>}
+    {insight && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{insight.rows} rows · {insight.columns.length} cols</span>}{mode !== 'select' && file && (
+  <button
+    onClick={() => setMode('select')}
+    style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', cursor: 'pointer' }}
+  >
+    switch mode
+  </button>
+)}
   </div>
 </div>
       {page === 'explore' ? (
@@ -164,13 +213,114 @@ setModelYaml(modelRes.data.yaml)
           <p style={{ color: '#555', fontSize: 13 }}>BigQuery · Snowflake connectors coming soon</p>
         </div>
 
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 13 }}>
-            analyzing with mirai ai...
-          </div>
-        )}
+       {loading && (
+  <div style={{ textAlign: 'center', padding: '3rem', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 13 }}>
+    {mode === 'ai' ? 'analyzing with mirai ai...' : 'preparing your dataset...'}
+  </div>
+)}
 
-        {insight && !loading && (
+{/* Mode selection */}
+{file && !loading && mode === 'select' && (
+  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: '1.5rem' }}>
+    <div
+      onClick={runAIAnalysis}
+      style={{
+        background: '#141414',
+        border: '0.5px solid #2a2a2a',
+        borderRadius: 16,
+        padding: 32,
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = '#1D9E75'
+        e.currentTarget.style.background = 'rgba(29,158,117,0.04)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#2a2a2a'
+        e.currentTarget.style.background = '#141414'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <Sparkles size={18} color="#1D9E75" />
+        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.08em' }}>recommended</span>
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: '#f0ede8', marginBottom: 8, letterSpacing: '-0.5px' }}>AI insights</div>
+      <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+        Let Mirai AI analyze your data and generate a full dashboard with trends, key highlights, and recommendations.
+      </p>
+      <ul style={{ paddingLeft: 16, color: '#666', fontSize: 13, lineHeight: 1.8, margin: 0 }}>
+        <li>Auto-generated charts</li>
+        <li>AI-written insights</li>
+        <li>Conversational follow-ups</li>
+      </ul>
+      <div style={{ marginTop: 24, color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+        analyze with ai →
+      </div>
+    </div>
+
+    <div
+      onClick={() => setMode('custom')}
+      style={{
+        background: '#141414',
+        border: '0.5px solid #2a2a2a',
+        borderRadius: 16,
+        padding: 32,
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = '#378ADD'
+        e.currentTarget.style.background = 'rgba(55,138,221,0.04)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#2a2a2a'
+        e.currentTarget.style.background = '#141414'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <TrendingUp size={18} color="#378ADD" />
+        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>power user</span>
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: '#f0ede8', marginBottom: 8, letterSpacing: '-0.5px' }}>Build from scratch</div>
+      <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+        Drag and drop widgets to build your own custom dashboard. Choose from charts, KPIs, tables, and more.
+      </p>
+      <ul style={{ paddingLeft: 16, color: '#666', fontSize: 13, lineHeight: 1.8, margin: 0 }}>
+        <li>Bar, line, pie, area charts</li>
+        <li>KPI cards, gauges, heatmaps</li>
+        <li>Drag-and-drop layout</li>
+      </ul>
+      <div style={{ marginTop: 24, color: '#378ADD', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+        start building →
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Custom dashboard placeholder */}
+{file && !loading && mode === 'custom' && (
+  <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 16, padding: '4rem 2rem', textAlign: 'center' }}>
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: 'rgba(55,138,221,0.1)', border: '0.5px solid #378ADD', borderRadius: 20, marginBottom: 24 }}>
+      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>coming next</span>
+    </div>
+    <div style={{ fontSize: 24, fontWeight: 700, color: '#f0ede8', marginBottom: 12, letterSpacing: '-0.5px' }}>Custom dashboard builder</div>
+    <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, maxWidth: 480, margin: '0 auto 24px' }}>
+      We're building drag-and-drop widgets right now. For now, switch to AI insights or use the Explore page to query your data.
+    </p>
+    <button
+      onClick={() => setMode('select')}
+      style={{ background: 'transparent', border: '0.5px solid #555', borderRadius: 8, padding: '10px 20px', color: '#888', fontFamily: 'DM Mono, monospace', fontSize: 12, cursor: 'pointer' }}
+    >
+      ← back to mode selection
+    </button>
+  </div>
+)}
+
+{insight && !loading && mode === 'ai' && (
+
           <>
             {/* Metric cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: '1.5rem' }}>

@@ -49,6 +49,7 @@ export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: E
   const chartRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+  console.log('Explore props:', { sharedFile, sharedModelYaml })
   if (sharedFile && sharedFile !== file) {
     setFile(sharedFile)
     const parseModel = async () => {

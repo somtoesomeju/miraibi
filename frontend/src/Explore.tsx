@@ -51,13 +51,19 @@ export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: E
   useEffect(() => {
   console.log('Explore props:', { sharedFile, sharedModelYaml })
   if (sharedFile && sharedFile !== file) {
+    console.log('Setting file and fetching model')
     setFile(sharedFile)
     const parseModel = async () => {
-      const form = new FormData()
-      form.append('file', sharedFile)
-      const res = await axios.post(`${API}/explore/model`, form)
-      setModel(res.data.model)
-      setModelYaml(res.data.yaml)
+      try {
+        const form = new FormData()
+        form.append('file', sharedFile)
+        const res = await axios.post(`${API}/explore/model`, form)
+        console.log('Model response:', res.data)
+        setModel(res.data.model)
+        setModelYaml(res.data.yaml)
+      } catch (e) {
+        console.error('Model fetch failed:', e)
+      }
     }
     parseModel()
   }

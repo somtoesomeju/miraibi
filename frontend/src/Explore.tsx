@@ -49,9 +49,8 @@ export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: E
   const chartRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-  console.log('Explore props:', { sharedFile, sharedModelYaml })
-  if (sharedFile && sharedFile !== file) {
-    console.log('Setting file and fetching model')
+  if (sharedFile && !model) {
+    console.log('Fetching model for shared file')
     setFile(sharedFile)
     const parseModel = async () => {
       try {
@@ -67,7 +66,7 @@ export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: E
     }
     parseModel()
   }
-}, [sharedFile])
+}, [sharedFile, model]) 
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
   if (!acceptedFiles.length) return

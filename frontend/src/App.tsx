@@ -86,33 +86,6 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
   onDrop, accept: { 'text/csv': ['.csv'] }, multiple: false
 })
 
-// Generate the explore model so we can use the chat endpoint for follow-ups
-const modelForm = new FormData()
-modelForm.append('file', f)
-const modelRes = await axios.post(`${API}/explore/model`, modelForm)
-setModelYaml(modelRes.data.yaml)
-      const text = await f.text()
-      const rows = text.trim().split('\n')
-      const headers = rows[0].split(',')
-      const parsed = rows.slice(1).map(row => {
-        const vals = row.split(',')
-        const obj: ChartRow = {}
-        headers.forEach((h, i) => {
-          const v = vals[i]?.trim()
-          obj[h.trim()] = isNaN(Number(v)) ? v : Number(v)
-        })
-        return obj
-      })
-      setChartData(parsed)
-    } catch (e) {
-      console.error(e)
-    }
-    setLoading(false)
-  }, [])
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { 'text/csv': ['.csv'] }, multiple: false
-  })
 
   const handleAsk = async () => {
   if (!file || !question.trim()) return

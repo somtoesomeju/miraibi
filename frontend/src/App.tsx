@@ -1,3 +1,4 @@
+import CustomBuilder from './CustomBuilder'
 import ReactMarkdown from 'react-markdown'
 import Explore from './Explore'
 import { useState, useCallback } from 'react'
@@ -275,21 +276,7 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
 
 {/* Custom dashboard placeholder */}
 {file && !loading && mode === 'custom' && (
-  <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 16, padding: '4rem 2rem', textAlign: 'center' }}>
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: 'rgba(55,138,221,0.1)', border: '0.5px solid #378ADD', borderRadius: 20, marginBottom: 24 }}>
-      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>coming next</span>
-    </div>
-    <div style={{ fontSize: 24, fontWeight: 700, color: '#f0ede8', marginBottom: 12, letterSpacing: '-0.5px' }}>Custom dashboard builder</div>
-    <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, maxWidth: 480, margin: '0 auto 24px' }}>
-      We're building drag-and-drop widgets right now. For now, switch to AI insights or use the Explore page to query your data.
-    </p>
-    <button
-      onClick={() => setMode('select')}
-      style={{ background: 'transparent', border: '0.5px solid #555', borderRadius: 8, padding: '10px 20px', color: '#888', fontFamily: 'DM Mono, monospace', fontSize: 12, cursor: 'pointer' }}
-    >
-      ← back to mode selection
-    </button>
-  </div>
+  <CustomBuilder file={file} modelYaml={modelYaml} chartData={chartData} />
 )}
 
 {insight && !loading && mode === 'ai' && (

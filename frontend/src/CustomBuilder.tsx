@@ -35,9 +35,6 @@ export default function CustomBuilder({ file, modelYaml, chartData }: CustomBuil
   const [showAddModal, setShowAddModal] = useState(false)
   const [sidebarTab, setSidebarTab] = useState<'fields' | 'widgets'>('fields')
 
-  // Parse model yaml to extract dimensions and measures (basic parsing)
-  const dimensions = modelYaml ? modelYaml.match(/(?<=dimensions:[\s\S]*?)- name: (\w+)/g)?.map(m => m.replace('- name: ', '')) ?? [] : []
-  const measures = modelYaml ? modelYaml.match(/(?<=measures:[\s\S]*?)- name: \w+/g)?.map(m => m.replace('- name: ', '')) ?? [] : []
 
   // Better yaml parsing
   const parseFields = () => {

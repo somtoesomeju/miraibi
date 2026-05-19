@@ -34,6 +34,9 @@ const [smartFields, setSmartFields] = useState<string[]>([])
 const [dashChatMessages, setDashChatMessages] = useState<{role: string, content: string}[]>([])
 const [mode, setMode] = useState<'select' | 'ai' | 'custom'>('select')
 const [showChat, setShowChat] = useState(false)
+const [exploreFields, setExploreFields] = useState<string[]>([])
+const [exploreFilters, setExploreFilters] = useState<any[]>([])
+const [exploreCalculations, setExploreCalculations] = useState<any[]>([])
 
   const onDrop = useCallback(async (files: File[]) => {
   const f = files[0]
@@ -192,6 +195,12 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
     sharedFile={file} 
     sharedModelYaml={modelYaml}
     onFileChange={(f, yaml) => { setFile(f); setModelYaml(yaml) }}
+    selectedFields={exploreFields}
+    filters={exploreFilters}
+    calculations={exploreCalculations}
+    onFieldsChange={setExploreFields}
+    onFiltersChange={setExploreFilters}
+    onCalculationsChange={setExploreCalculations}
   />
 ) : (<>
         {/* Upload */}
@@ -447,13 +456,18 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
         </>)}
       </div>
 
-      <ChatAI
-        file={file}
-        modelYaml={modelYaml}
-        showChat={showChat}
-        onClose={() => setShowChat(false)}
-        context={page === 'explore' ? 'explore' : mode === 'custom' ? 'builder' : 'dashboard'}
-      />
+     <ChatAI
+  file={file}
+  modelYaml={modelYaml}
+  showChat={showChat}
+  onClose={() => setShowChat(false)}
+  context={page === 'explore' ? 'explore' : mode === 'custom' ? 'builder' : 'dashboard'}
+  selectedFields={exploreFields}
+  filters={exploreFilters}
+  calculations={exploreCalculations}
+  onFieldsUpdate={setExploreFields}
+  onFiltersUpdate={setExploreFilters}
+/>
     </div>
   )
 }  

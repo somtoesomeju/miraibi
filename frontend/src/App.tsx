@@ -440,6 +440,7 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
     >
       {askLoading ? 'thinking...' : 'Ask Mirai ↗'}
     </button>
+    </div>
   </div>
           </>
         )}
@@ -456,4 +457,3 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
     </div>
   )
 }  
- 

@@ -352,39 +352,69 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
   ))}
 </div>
 
-            {/* Charts */}
+           {/* Charts */}
 {categoryCols.length >= 1 && (
-  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: '1.5rem' }}>
-    <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20 }}>
-      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
-        {numericCols.length >= 1 ? `${numericCols[0]} by ${categoryCols[0]}` : `${categoryCols[0]} distribution`}
+  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+    <div style={{
+      background: '#121212',
+      border: '0.5px solid #2a2a2a',
+      borderRadius: 14,
+      padding: 24,
+      transition: 'all 0.15s ease',
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3a3a3a' }}
+    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#2a2a2a' }}
+    >
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: '#f0ede8', marginBottom: 4 }}>
+          {numericCols.length >= 1 ? `${numericCols[0]} by ${categoryCols[0]}` : `${categoryCols[0]} distribution`}
+        </div>
+        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {numericCols.length >= 1 ? 'aggregated bar chart' : 'count distribution'}
+        </div>
       </div>
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height={220}>
         <BarChart data={(numericCols.length >= 1 ? chartData.slice(0, 20) :
-  Object.entries(chartData.reduce((acc: any, row) => {
-    const key = row[categoryCols[0]] as string
-    acc[key] = (acc[key] || 0) + 1
-    return acc
-  }, {})).map(([k, v]) => ({ [categoryCols[0]]: k, count: v as number }))
-) as any}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-          <XAxis dataKey={categoryCols[0]} tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-          <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-          <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
-          <Bar dataKey={numericCols.length >= 1 ? numericCols[0] : 'count'} fill="#1D9E75" radius={[4,4,0,0]} />
+          Object.entries(chartData.reduce((acc: any, row) => {
+            const key = row[categoryCols[0]] as string
+            acc[key] = (acc[key] || 0) + 1
+            return acc
+          }, {})).map(([k, v]) => ({ [categoryCols[0]]: k, count: v as number }))
+        ) as any}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" />
+          <XAxis dataKey={categoryCols[0]} tick={{ fontSize: 10, fill: '#666', fontFamily: 'DM Mono' }} stroke="#2a2a2a" />
+          <YAxis tick={{ fontSize: 10, fill: '#666', fontFamily: 'DM Mono' }} stroke="#2a2a2a" />
+          <Tooltip contentStyle={{ background: '#181818', border: '0.5px solid #3a3a3a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
+          <Bar dataKey={numericCols.length >= 1 ? numericCols[0] : 'count'} fill="#1D9E75" radius={[6,6,0,0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
 
-    <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20 }}>
-      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>trends — {numericCols.slice(0, 3).join(' · ')}</div>
-      <ResponsiveContainer width="100%" height={200}>
+    <div style={{
+      background: '#121212',
+      border: '0.5px solid #2a2a2a',
+      borderRadius: 14,
+      padding: 24,
+      transition: 'all 0.15s ease',
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3a3a3a' }}
+    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#2a2a2a' }}
+    >
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: '#f0ede8', marginBottom: 4 }}>
+          Trends
+        </div>
+        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {numericCols.slice(0, 3).join(' · ') || 'no numeric fields'}
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={220}>
         <LineChart data={chartData.slice(0, 20)}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-          <XAxis dataKey={categoryCols[0]} tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-          <YAxis tick={{ fontSize: 10, fill: '#555', fontFamily: 'DM Mono' }} />
-          <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
-          <Legend wrapperStyle={{ fontFamily: 'DM Mono', fontSize: 11, color: '#555' }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" />
+          <XAxis dataKey={categoryCols[0]} tick={{ fontSize: 10, fill: '#666', fontFamily: 'DM Mono' }} stroke="#2a2a2a" />
+          <YAxis tick={{ fontSize: 10, fill: '#666', fontFamily: 'DM Mono' }} stroke="#2a2a2a" />
+          <Tooltip contentStyle={{ background: '#181818', border: '0.5px solid #3a3a3a', borderRadius: 8, fontFamily: 'DM Mono', fontSize: 12 }} />
+          <Legend wrapperStyle={{ fontFamily: 'DM Mono', fontSize: 10, color: '#888', paddingTop: 12 }} />
           {numericCols.slice(0, 3).map((col, i) => (
             <Line key={col} type="monotone" dataKey={col} stroke={COLORS[i]} strokeWidth={2} dot={false} />
           ))}

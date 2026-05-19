@@ -182,18 +182,37 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
   />
 ) : (<>
         {/* Upload */}
-        <div {...getRootProps()} style={{ border: `0.5px dashed ${isDragActive ? '#1D9E75' : '#2a2a2a'}`, borderRadius: 12, padding: '2.5rem', textAlign: 'center', marginBottom: '2rem', background: isDragActive ? 'rgba(29,158,117,0.05)' : '#141414', cursor: 'pointer', transition: 'all 0.2s' }}>
-          <input {...getInputProps()} />
-          <Upload size={28} style={{ margin: '0 auto 12px', color: '#1D9E75', display: 'block' }} />
-          <p style={{ color: '#f0ede8', fontWeight: 500, marginBottom: 4 }}>
-            {isDragActive ? 'Drop it here' : 'Drop a CSV file or click to upload'}
-          </p>
-          <p style={{ color: '#555', fontSize: 13 }}>BigQuery · Snowflake connectors coming soon</p>
-        </div>
-
-       {loading && (
-  <div style={{ textAlign: 'center', padding: '3rem', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 13 }}>
-    {mode === 'ai' ? 'analyzing with mirai ai...' : 'preparing your dataset...'}
+{!file && (
+  <div style={{ marginTop: 48 }}>
+    <div style={{ fontSize: 24, fontWeight: 600, color: '#f0ede8', letterSpacing: '-0.4px', marginBottom: 8 }}>
+      Welcome to Mirai BI
+    </div>
+    <div style={{ fontSize: 14, color: '#888', marginBottom: 32 }}>
+      Upload a CSV to start exploring your data with AI-powered insights.
+    </div>
+    <div {...getRootProps()} style={{
+      border: `1px dashed ${isDragActive ? '#1D9E75' : '#2a2a2a'}`,
+      borderRadius: 14,
+      padding: '64px 32px',
+      textAlign: 'center',
+      background: isDragActive ? 'rgba(29,158,117,0.04)' : '#121212',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    }}>
+      <input {...getInputProps()} />
+      <div style={{
+        width: 48, height: 48, borderRadius: 12,
+        background: 'rgba(29,158,117,0.1)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 16px',
+      }}>
+        <Upload size={20} color="#1D9E75" />
+      </div>
+      <p style={{ color: '#f0ede8', fontSize: 15, fontWeight: 500, marginBottom: 6 }}>
+        {isDragActive ? 'Drop your file here' : 'Drop a CSV or click to upload'}
+      </p>
+      <p style={{ color: '#666', fontSize: 13, margin: 0 }}>BigQuery and Snowflake connectors coming soon</p>
+    </div>
   </div>
 )}
 

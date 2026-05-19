@@ -477,27 +477,48 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
 <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20, marginTop: '1rem' }}>
   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>ask mirai about your data</div>
 
+  {/* Ask follow-up */}
+<div style={{
+  background: '#121212',
+  border: '0.5px solid #2a2a2a',
+  borderRadius: 14,
+  padding: 24,
+  marginTop: 24,
+}}>
+  <div style={{ marginBottom: 20 }}>
+    <div style={{ fontSize: 14, fontWeight: 500, color: '#f0ede8', marginBottom: 4 }}>
+      Ask a follow-up
+    </div>
+    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      Refine the dashboard with natural language
+    </div>
+  </div>
+
   {/* Chat history */}
   {dashChatMessages.length > 0 && (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16, maxHeight: 400, overflowY: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 400, overflowY: 'auto', paddingRight: 4 }}>
       {dashChatMessages.map((msg, i) => (
         <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
           <div style={{
-            maxWidth: '85%', padding: '10px 14px',
-            borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-            background: msg.role === 'user' ? 'rgba(29,158,117,0.12)' : '#0e0e0e',
-            border: `0.5px solid ${msg.role === 'user' ? '#1D9E75' : '#2a2a2a'}`,
-            color: msg.role === 'user' ? '#1D9E75' : '#aaa',
-            fontFamily: 'DM Mono, monospace', fontSize: 12, lineHeight: 1.7
+            maxWidth: '85%',
+            padding: '12px 16px',
+            borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+            background: msg.role === 'user' ? 'rgba(29,158,117,0.08)' : '#181818',
+            border: `0.5px solid ${msg.role === 'user' ? 'rgba(29,158,117,0.3)' : '#2a2a2a'}`,
+            color: msg.role === 'user' ? '#1D9E75' : '#c4c4c4',
+            fontSize: 13, lineHeight: 1.7,
           }}>
             {msg.role === 'assistant' ? (
               <ReactMarkdown
                 components={{
-                  h2: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 700, fontSize: 11, marginBottom: 8, marginTop: 12, fontFamily: 'DM Mono, monospace', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{children}</div>,
+                  h2: ({children}) => <div style={{ color: '#f0ede8', fontWeight: 600, fontSize: 12, marginBottom: 6, marginTop: 10, fontFamily: 'Syne, sans-serif' }}>{children}</div>,
                   strong: ({children}) => <span style={{ color: '#f0ede8', fontWeight: 600 }}>{children}</span>,
-                  p: ({children}) => <p style={{ margin: '4px 0', color: '#aaa' }}>{children}</p>,
-                  ul: ({children}) => <ul style={{ paddingLeft: 16, margin: '4px 0', color: '#aaa' }}>{children}</ul>,
-                  li: ({children}) => <li style={{ margin: '2px 0' }}>{children}</li>,
+                  p: ({children}) => <p style={{ margin: '4px 0', color: '#c4c4c4', fontSize: 13 }}>{children}</p>,
+                  ul: ({children}) => <ul style={{ paddingLeft: 0, margin: '6px 0', color: '#c4c4c4', listStyle: 'none' }}>{children}</ul>,
+                  li: ({children}) => <li style={{ margin: '4px 0', fontSize: 13, paddingLeft: 12, position: 'relative' as const }}>
+                    <span style={{ position: 'absolute' as const, left: 0, top: 9, width: 3, height: 3, borderRadius: 3, background: '#1D9E75' }} />
+                    {children}
+                  </li>,
                 }}
               >
                 {msg.content}
@@ -508,13 +529,69 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
       ))}
       {askLoading && (
         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-          <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 2px', background: '#0e0e0e', border: '0.5px solid #2a2a2a', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
-            thinking...
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '14px 14px 14px 4px',
+            background: '#181818',
+            border: '0.5px solid #2a2a2a',
+            color: '#1D9E75',
+            fontFamily: 'DM Mono, monospace',
+            fontSize: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: 6, background: '#1D9E75', animation: 'pulse 1.4s ease-in-out infinite' }} />
+            thinking
           </div>
         </div>
       )}
     </div>
   )}
+
+  {/* Input */}
+  <div style={{ display: 'flex', gap: 8 }}>
+    <input
+      value={question}
+      onChange={e => setQuestion(e.target.value)}
+      onKeyDown={e => e.key === 'Enter' && handleAsk()}
+      placeholder="Ask anything about your data..."
+      style={{
+        flex: 1,
+        background: '#0a0a0a',
+        border: '0.5px solid #2a2a2a',
+        borderRadius: 10,
+        padding: '12px 16px',
+        color: '#f0ede8',
+        fontFamily: 'Syne, sans-serif',
+        fontSize: 14,
+        outline: 'none',
+        transition: 'all 0.15s ease',
+      }}
+      onFocus={(e) => { e.currentTarget.style.borderColor = '#1D9E75' }}
+      onBlur={(e) => { e.currentTarget.style.borderColor = '#2a2a2a' }}
+    />
+    <button
+      onClick={handleAsk}
+      disabled={askLoading}
+      style={{
+        background: 'rgba(29,158,117,0.12)',
+        border: '0.5px solid rgba(29,158,117,0.4)',
+        borderRadius: 10,
+        padding: '12px 20px',
+        color: '#1D9E75',
+        fontFamily: 'Syne, sans-serif',
+        fontSize: 13,
+        fontWeight: 500,
+        cursor: askLoading ? 'not-allowed' : 'pointer',
+        opacity: askLoading ? 0.5 : 1,
+        transition: 'all 0.15s ease',
+      }}
+    >
+      {askLoading ? 'Thinking...' : 'Ask'}
+    </button>
+  </div>
+</div>
 
   {/* Input */}
   <div style={{ display: 'flex', gap: 8 }}>

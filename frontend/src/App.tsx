@@ -1,3 +1,4 @@
+import ChatAI from './ChatAI'
 import CustomBuilder from './CustomBuilder'
 import ReactMarkdown from 'react-markdown'
 import Explore from './Explore'
@@ -32,6 +33,7 @@ const [smartFilters, setSmartFilters] = useState<any[]>([])
 const [smartFields, setSmartFields] = useState<string[]>([])
 const [dashChatMessages, setDashChatMessages] = useState<{role: string, content: string}[]>([])
 const [mode, setMode] = useState<'select' | 'ai' | 'custom'>('select')
+const [showChat, setShowChat] = useState(false)
 
   const onDrop = useCallback(async (files: File[]) => {
   const f = files[0]
@@ -159,6 +161,21 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
     <button onClick={() => setPage('dashboard')} style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 12, color: page === 'dashboard' ? '#1D9E75' : '#555', cursor: 'pointer' }}>dashboard</button>
     <button onClick={() => setPage('explore')} style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 12, color: page === 'explore' ? '#1D9E75' : '#555', cursor: 'pointer' }}>explore</button>
+    {file && (
+  <button
+    onClick={() => setShowChat(!showChat)}
+    style={{
+      background: showChat ? 'rgba(55,138,221,0.15)' : 'transparent',
+      border: `0.5px solid ${showChat ? '#378ADD' : '#2a2a2a'}`,
+      borderRadius: 8, padding: '5px 12px',
+      color: showChat ? '#378ADD' : '#888',
+      fontFamily: 'DM Mono, monospace', fontSize: 11,
+      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5
+    }}
+  >
+    <Sparkles size={11} />Chat AI
+  </button>
+)}
     {file && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{file.name}</span>}
     {insight && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{insight.rows} rows · {insight.columns.length} cols</span>}{mode !== 'select' && file && (
   <button
@@ -424,12 +441,19 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
       {askLoading ? 'thinking...' : 'Ask Mirai ↗'}
     </button>
   </div>
-</div>
           </>
         )}
         </>)}
       </div>
+
+      <ChatAI
+        file={file}
+        modelYaml={modelYaml}
+        showChat={showChat}
+        onClose={() => setShowChat(false)}
+        context={page === 'explore' ? 'explore' : mode === 'custom' ? 'builder' : 'dashboard'}
+      />
     </div>
   )
-} 
+}  
  

@@ -315,20 +315,42 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
 {insight && !loading && mode === 'ai' && (
 
           <>
-            {/* Metric cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: '1.5rem' }}>
-              {[
-                { label: 'Total rows', value: insight.rows.toLocaleString(), icon: <Users size={16} color="#1D9E75" /> },
-                { label: 'Columns', value: insight.columns.length, icon: <TrendingUp size={16} color="#378ADD" /> },
-                { label: 'Numeric fields', value: numericCols.length, icon: <DollarSign size={16} color="#BA7517" /> },
-                { label: 'AI insights', value: 'Ready', icon: <Award size={16} color="#7F77DD" /> },
-              ].map((m, i) => (
-                <div key={i} style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>{m.icon}<span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</span></div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: '#f0ede8' }}>{m.value}</div>
-                </div>
-              ))}
-            </div>
+            {/* AI Insights header */}
+<div style={{ marginTop: 16, marginBottom: 32 }}>
+  <div style={{ fontSize: 22, fontWeight: 600, color: '#f0ede8', letterSpacing: '-0.4px', marginBottom: 6 }}>
+    AI insights
+  </div>
+  <div style={{ fontSize: 13, color: '#888' }}>
+    Auto-generated dashboard for {file?.name}
+  </div>
+</div>
+
+{/* Metric cards */}
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 24 }}>
+  {[
+    { label: 'Rows', value: insight.rows.toLocaleString(), color: '#1D9E75' },
+    { label: 'Columns', value: insight.columns.length, color: '#378ADD' },
+    { label: 'Numeric fields', value: numericCols.length, color: '#BA7517' },
+    { label: 'AI status', value: 'Ready', color: '#7F77DD' },
+  ].map((m, i) => (
+    <div key={i} style={{
+      background: '#121212',
+      border: '0.5px solid #2a2a2a',
+      borderRadius: 12,
+      padding: '18px 20px',
+      transition: 'all 0.15s ease',
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3a3a3a' }}
+    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#2a2a2a' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ width: 6, height: 6, borderRadius: 6, background: m.color }} />
+        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>{m.label}</span>
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 600, color: '#f0ede8', letterSpacing: '-0.5px', fontFamily: 'Syne, sans-serif' }}>{m.value}</div>
+    </div>
+  ))}
+</div>
 
             {/* Charts */}
 {categoryCols.length >= 1 && (

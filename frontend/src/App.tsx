@@ -199,80 +199,90 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
 
 {/* Mode selection */}
 {file && !loading && mode === 'select' && (
-  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: '1.5rem' }}>
-    <div
-      onClick={runAIAnalysis}
-      style={{
-        background: '#141414',
-        border: '0.5px solid #2a2a2a',
-        borderRadius: 16,
-        padding: 32,
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#1D9E75'
-        e.currentTarget.style.background = 'rgba(29,158,117,0.04)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#2a2a2a'
-        e.currentTarget.style.background = '#141414'
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <Sparkles size={18} color="#1D9E75" />
-        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.08em' }}>recommended</span>
-      </div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: '#f0ede8', marginBottom: 8, letterSpacing: '-0.5px' }}>AI insights</div>
-      <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-        Let Mirai AI analyze your data and generate a full dashboard with trends, key highlights, and recommendations.
-      </p>
-      <ul style={{ paddingLeft: 16, color: '#666', fontSize: 13, lineHeight: 1.8, margin: 0 }}>
-        <li>Auto-generated charts</li>
-        <li>AI-written insights</li>
-        <li>Conversational follow-ups</li>
-      </ul>
-      <div style={{ marginTop: 24, color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
-        analyze with ai →
-      </div>
+  <div style={{ marginTop: 48, marginBottom: 32 }}>
+    <div style={{ fontSize: 24, fontWeight: 600, color: '#f0ede8', letterSpacing: '-0.4px', marginBottom: 8 }}>
+      How would you like to explore?
     </div>
-
-    <div
-      onClick={() => setMode('custom')}
-      style={{
-        background: '#141414',
-        border: '0.5px solid #2a2a2a',
-        borderRadius: 16,
-        padding: 32,
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#378ADD'
-        e.currentTarget.style.background = 'rgba(55,138,221,0.04)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#2a2a2a'
-        e.currentTarget.style.background = '#141414'
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <TrendingUp size={18} color="#378ADD" />
-        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>power user</span>
+    <div style={{ fontSize: 14, color: '#888', marginBottom: 32 }}>
+      Choose between AI-generated insights or build your own dashboard from scratch.
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div
+        onClick={runAIAnalysis}
+        style={{
+          background: '#121212',
+          border: '0.5px solid #2a2a2a',
+          borderRadius: 14,
+          padding: 28,
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#1D9E75'
+          e.currentTarget.style.background = 'rgba(29,158,117,0.03)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#2a2a2a'
+          e.currentTarget.style.background = '#121212'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(29,158,117,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Sparkles size={16} color="#1D9E75" />
+          </div>
+          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#1D9E75', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500 }}>Recommended</span>
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 600, color: '#f0ede8', marginBottom: 6, letterSpacing: '-0.2px' }}>AI insights</div>
+        <p style={{ color: '#888', fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
+          Let Mirai AI analyze your data and surface trends, highlights, and recommendations automatically.
+        </p>
+        <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
+          {['Auto-generated charts', 'AI-written insights', 'Conversational follow-ups'].map(item => (
+            <li key={item} style={{ color: '#c4c4c4', fontSize: 13, lineHeight: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 4, height: 4, borderRadius: 4, background: '#1D9E75' }} />
+              {item}
+            </li>
+          ))}
+        </ul>
       </div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: '#f0ede8', marginBottom: 8, letterSpacing: '-0.5px' }}>Build from scratch</div>
-      <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-        Drag and drop widgets to build your own custom dashboard. Choose from charts, KPIs, tables, and more.
-      </p>
-      <ul style={{ paddingLeft: 16, color: '#666', fontSize: 13, lineHeight: 1.8, margin: 0 }}>
-        <li>Bar, line, pie, area charts</li>
-        <li>KPI cards, gauges, heatmaps</li>
-        <li>Drag-and-drop layout</li>
-      </ul>
-      <div style={{ marginTop: 24, color: '#378ADD', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
-        start building →
+
+      <div
+        onClick={() => setMode('custom')}
+        style={{
+          background: '#121212',
+          border: '0.5px solid #2a2a2a',
+          borderRadius: 14,
+          padding: 28,
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#378ADD'
+          e.currentTarget.style.background = 'rgba(55,138,221,0.03)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#2a2a2a'
+          e.currentTarget.style.background = '#121212'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(55,138,221,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={16} color="#378ADD" />
+          </div>
+          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 500 }}>Power user</span>
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 600, color: '#f0ede8', marginBottom: 6, letterSpacing: '-0.2px' }}>Build from scratch</div>
+        <p style={{ color: '#888', fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
+          Drag and drop widgets to create your own dashboard with full control over every chart.
+        </p>
+        <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
+          {['Bar, line, pie, area charts', 'KPI cards, gauges, heatmaps', 'Per-widget configuration'].map(item => (
+            <li key={item} style={{ color: '#c4c4c4', fontSize: 13, lineHeight: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 4, height: 4, borderRadius: 4, background: '#378ADD' }} />
+              {item}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   </div>

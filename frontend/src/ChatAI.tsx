@@ -69,6 +69,7 @@ export default function ChatAI({
       form.append('calculations', JSON.stringify(calculations))
       form.append('messages', JSON.stringify([...chatMessages, userMsg]))
       form.append('user_message', userMsg.content)
+      form.append('context', context)
       const res = await axios.post(`${API}/explore/chat`, form)
 
       const assistantMsg: ChatMessage = {

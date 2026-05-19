@@ -169,7 +169,8 @@ async def explore_chat(
     filters: str = Form("[]"),
     calculations: str = Form("[]"),
     messages: str = Form("[]"),
-    user_message: str = Form("")
+    user_message: str = Form(""),
+    context: str = Form("dashboard")
 ):
     print(f"DEBUG user_message: '{user_message}'")  # add this line
     print(f"DEBUG messages: '{messages}'")           # add this line
@@ -189,7 +190,10 @@ async def explore_chat(
     result = run_explore(df, model_yaml, selected, filter_list, calc_list)
     data_preview = result.head(20).to_string(index=False)
 
-    system_prompt = f"""You are Mirai AI, a data analyst assistant inside Mirai BI.
+    is_explore = context == "explore"
+
+    if is_explore:
+        system_prompt = f"""You are Mirai AI, a data analyst assistant inside Mirai BI's Explore page.
 
 CRITICAL RULES:
 1. You MUST always end your response with a <query_update> block when the user asks about data, charts, trends, or metrics
@@ -223,6 +227,24 @@ Selected fields should be: ["platform", "revenue_attributed"]
 
 Example - if user asks "show monthly impressions and clicks":
 Selected fields should be: ["month", "impressions", "clicks"]"""
+    else:
+        system_prompt = f"""You are Mirai AI, a data analyst assistant inside Mirai BI.
+
+CRITICAL RULES:
+1. You are a READ-ONLY analyst on this page. You CANNOT modify the dashboard or create widgets.
+2. If asked to "build" or "create" a chart, politely explain that chart-building is only available on the Explore page or via the Build from Scratch builder. Suggest the user go there.
+3. Otherwise, answer questions about the data with insight: trends, anomalies, top items, comparisons.
+4. Use markdown formatting: **bold** for numbers, ## for sections.
+5. Keep responses focused — 3-5 sentences for simple questions, structured markdown for analysis.
+
+Available fields in this dataset:
+- Dimensions: {[d['name'] for d in yaml.safe_load(model_yaml).get('dimensions', [])]}
+- Measures: {[m['name'] for m in yaml.safe_load(model_yaml).get('measures', [])]}
+
+Current data preview:
+{result.head(10).to_string(index=False)}
+
+NEVER include a <query_update> block in your responses on this page."""
 
     chat_messages = []
     for msg in history:

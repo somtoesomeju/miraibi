@@ -13,12 +13,7 @@ interface Measure { name: string; type: string; field: string; aggregation: stri
 interface Model { model: string; dimensions: Dimension[]; measures: Measure[]; calculations: any[] }
 interface Filter { field: string; operator: string; value: string }
 interface Calculation { name: string; expression: string }
-interface ChatMessage {
-  role: string
-  content: string
-  chartData?: any[]
-  chartCols?: string[]
-}
+
 
 const OPERATORS = ['equals', 'not_equals', 'greater_than', 'less_than', 'contains']
 const COLORS = ['#1D9E75', '#378ADD', '#BA7517', '#7F77DD', '#D85A30']
@@ -153,22 +148,7 @@ const setCalculations = (calcs: Calculation[] | ((prev: Calculation[]) => Calcul
     setLoading(false)
   }
 
-  const runQuerySilent = async (overrideFilters?: Filter[], overrideFields?: string[]) => {
-    if (!file) return null
-    try {
-      const form = new FormData()
-      form.append('file', file)
-      form.append('model_yaml', modelYaml)
-      form.append('selected_fields', JSON.stringify(overrideFields ?? selectedFields))
-      form.append('filters', JSON.stringify(overrideFilters ?? filters))
-      form.append('calculations', JSON.stringify(calculations))
-      const res = await axios.post(`${API}/explore/query`, form)
-      return { data: res.data.data, columns: res.data.columns }
-    } catch (e) {
-      console.error(e)
-      return null
-    }
-  }
+
 
   const downloadPNG = async () => {
     if (!chartRef.current) return

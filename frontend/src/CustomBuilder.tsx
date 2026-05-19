@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Plus, X, BarChart3, LineChart as LineIcon, PieChart as PieIcon, AreaChart as AreaIcon, ScatterChart as ScatterIcon, Table as TableIcon, Grid as HeatmapIcon, Hash, Gauge as GaugeIcon, Database, Layers } from 'lucide-react'
-
+import { Plus, X, BarChart3, LineChart as LineIcon, PieChart as PieIcon, AreaChart as AreaIcon, ScatterChart as ScatterIcon, Table as TableIcon, Grid as HeatmapIcon, Hash, Gauge as GaugeIcon, Database, Layers, Settings } from 'lucide-react'
 interface CustomBuilderProps {
   file: File | null
   modelYaml: string
@@ -34,6 +33,7 @@ export default function CustomBuilder({ file, modelYaml, chartData }: CustomBuil
   const [widgets, setWidgets] = useState<Widget[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [sidebarTab, setSidebarTab] = useState<'fields' | 'widgets'>('fields')
+  const [configWidgetId, setConfigWidgetId] = useState<string | null>(null)
 
 
   // Better yaml parsing
@@ -77,6 +77,14 @@ export default function CustomBuilder({ file, modelYaml, chartData }: CustomBuil
   const removeWidget = (id: string) => {
     setWidgets(widgets.filter(w => w.id !== id))
   }
+
+  const updateWidgetConfig = (id: string, config: Partial<Widget['config']>) => {
+  setWidgets(widgets.map(w =>
+    w.id === id ? { ...w, config: { ...w.config, ...config } } : w
+  ))
+}
+
+const configWidget = widgets.find(w => w.id === configWidgetId)
 
  const renderWidget = (widget: Widget) => {
   const { xField, yField } = widget.config
@@ -446,23 +454,127 @@ export default function CustomBuilder({ file, modelYaml, chartData }: CustomBuil
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
             {widgets.map(w => (
-              <div key={w.id} style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={s.label as any}>{w.config.title}</span>
-                  <button
-                    onClick={() => removeWidget(w.id)}
-                    style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer' }}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-                {renderWidget(w)}
-              </div>
-            ))}
+  <div key={w.id} style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 20 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <span style={s.label as any}>{w.config.title}</span>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          onClick={() => setConfigWidgetId(w.id)}
+          style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', padding: 4 }}
+          title="Configure"
+        >
+          <Settings size={13} />
+        </button>
+        <button
+          onClick={() => removeWidget(w.id)}
+          style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', padding: 4 }}
+          title="Remove"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+    {renderWidget(w)}
+  </div>
+))}
           </div>
         )}
       </div>
 
+{/* Config drawer */}
+      <div style={{
+        position: 'fixed', top: 0, right: configWidget ? 0 : '-420px',
+        pointerEvents: configWidget ? 'all' : 'none',
+        width: 400, height: '100vh', background: '#0e0e0e',
+        borderLeft: '0.5px solid #2a2a2a', transition: 'right 0.3s ease',
+        zIndex: 150, display: 'flex', flexDirection: 'column', padding: '1.5rem'
+      }}>
+        {configWidget && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '0.5px solid #2a2a2a' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Settings size={14} color="#888" />
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: '#f0ede8', fontWeight: 500 }}>Configure widget</span>
+                </div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#555', marginTop: 4 }}>{configWidget.type} widget</div>
+              </div>
+              <button onClick={() => setConfigWidgetId(null)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', padding: 4 }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {/* Title */}
+              <div style={{ marginBottom: 20 }}>
+                <span style={s.label as any}>title</span>
+                <input
+                  value={configWidget.config.title ?? ''}
+                  onChange={e => updateWidgetConfig(configWidget.id, { title: e.target.value })}
+                  style={{
+                    width: '100%', background: '#141414', border: '0.5px solid #2a2a2a',
+                    borderRadius: 6, padding: '8px 12px', color: '#f0ede8',
+                    fontFamily: 'DM Mono, monospace', fontSize: 12, outline: 'none', boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* X-Axis field (dimension) */}
+              <div style={{ marginBottom: 20 }}>
+                <span style={s.label as any}>{configWidget.type === 'pie' ? 'category (slices)' : configWidget.type === 'kpi' || configWidget.type === 'gauge' ? 'group by' : 'x-axis'}</span>
+                <select
+                  value={configWidget.config.xField ?? ''}
+                  onChange={e => updateWidgetConfig(configWidget.id, { xField: e.target.value })}
+                  style={{
+                    width: '100%', background: '#141414', border: '0.5px solid #2a2a2a',
+                    borderRadius: 6, padding: '8px 12px', color: '#1D9E75',
+                    fontFamily: 'DM Mono, monospace', fontSize: 12, outline: 'none', boxSizing: 'border-box'
+                  }}
+                >
+                  <option value="">— select dimension —</option>
+                  {dims.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Y-Axis field (measure) */}
+              <div style={{ marginBottom: 20 }}>
+                <span style={s.label as any}>{configWidget.type === 'pie' ? 'value' : configWidget.type === 'kpi' || configWidget.type === 'gauge' ? 'metric' : 'y-axis'}</span>
+                <select
+                  value={configWidget.config.yField ?? ''}
+                  onChange={e => updateWidgetConfig(configWidget.id, { yField: e.target.value })}
+                  style={{
+                    width: '100%', background: '#141414', border: '0.5px solid #2a2a2a',
+                    borderRadius: 6, padding: '8px 12px', color: '#378ADD',
+                    fontFamily: 'DM Mono, monospace', fontSize: 12, outline: 'none', boxSizing: 'border-box'
+                  }}
+                >
+                  <option value="">— select measure —</option>
+                  {meas.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Info card */}
+              <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: 12, marginTop: 20 }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>aggregation</div>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#aaa', lineHeight: 1.6 }}>
+                  Values are summed by {configWidget.config.xField || 'category'}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setConfigWidgetId(null)}
+              style={{ background: 'rgba(29,158,117,0.1)', border: '0.5px solid #1D9E75', borderRadius: 8, padding: '10px 14px', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12, cursor: 'pointer', marginTop: 16 }}
+            >
+              Done
+            </button>
+          </>
+        )}
+      </div>
       {/* Add widget modal */}
       {showAddModal && (
         <div

@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import axios from 'axios'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { Upload, Sparkles, TrendingUp, DollarSign, Users, Award } from 'lucide-react'
+import { Upload, Sparkles, TrendingUp } from 'lucide-react'
 
 const API = 'https://miraibi-production.up.railway.app'
 

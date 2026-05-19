@@ -1,3 +1,4 @@
+import Sidebar from './Sidebar'
 import ChatAI from './ChatAI'
 import CustomBuilder from './CustomBuilder'
 import ReactMarkdown from 'react-markdown'
@@ -153,43 +154,20 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
   const COLORS = ['#1D9E75', '#378ADD', '#BA7517', '#7F77DD', '#D85A30']
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0e0e0e' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem' }}>
+  <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex' }}>
+    <Sidebar
+      page={page}
+      setPage={setPage}
+      mode={mode}
+      setMode={setMode}
+      file={file}
+      onUpload={() => {/* upload handled by dropzone */}}
+      onChatToggle={() => setShowChat(!showChat)}
+      showChat={showChat}
+    />
+    <div style={{ flex: 1, marginLeft: 240, padding: '2rem 2rem', maxWidth: 1200 }}>
 
-        {/* Topbar */}
-<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '0.5px solid #2a2a2a' }}>
-  <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.5px' }}>
-    mirai<span style={{ color: '#1D9E75' }}>bi</span>
-  </div>
-  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-    <button onClick={() => setPage('dashboard')} style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 12, color: page === 'dashboard' ? '#1D9E75' : '#555', cursor: 'pointer' }}>dashboard</button>
-    <button onClick={() => setPage('explore')} style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 12, color: page === 'explore' ? '#1D9E75' : '#555', cursor: 'pointer' }}>explore</button>
-    {file && (
-  <button
-    onClick={() => setShowChat(!showChat)}
-    style={{
-      background: showChat ? 'rgba(55,138,221,0.15)' : 'transparent',
-      border: `0.5px solid ${showChat ? '#378ADD' : '#2a2a2a'}`,
-      borderRadius: 8, padding: '5px 12px',
-      color: showChat ? '#378ADD' : '#888',
-      fontFamily: 'DM Mono, monospace', fontSize: 11,
-      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5
-    }}
-  >
-    <Sparkles size={11} />Chat AI
-  </button>
-)}
-    {file && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{file.name}</span>}
-    {insight && <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 4, padding: '3px 10px', color: '#888' }}>{insight.rows} rows · {insight.columns.length} cols</span>}{mode !== 'select' && file && (
-  <button
-    onClick={() => setMode('select')}
-    style={{ background: 'none', border: 'none', fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555', cursor: 'pointer' }}
-  >
-    switch mode
-  </button>
-)}
-  </div>
-</div>
+        
       {page === 'explore' ? (
   <Explore 
     sharedFile={file} 

@@ -1,9 +1,9 @@
+import { useState, useCallback, useEffect } from 'react'
 import Sidebar from './Sidebar'
 import ChatAI from './ChatAI'
 import CustomBuilder from './CustomBuilder'
 import ReactMarkdown from 'react-markdown'
 import Explore from './Explore'
-import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import axios from 'axios'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
@@ -89,6 +89,12 @@ const runAIAnalysis = async () => {
   setLoading(false)
 }
 
+useEffect(() => {
+  if (mode === 'ai' && file && !insight && !loading) {
+    runAIAnalysis()
+  }
+}, [mode, file])
+
 const { getRootProps, getInputProps, isDragActive } = useDropzone({
   onDrop, accept: { 'text/csv': ['.csv'] }, multiple: false
 })
@@ -165,6 +171,38 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
       onChatToggle={() => setShowChat(!showChat)}
       showChat={showChat}
     />
+    {loading && (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 240,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(10,10,10,0.7)',
+    backdropFilter: 'blur(8px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 200,
+    flexDirection: 'column',
+    gap: 16,
+  }}>
+    <div style={{
+      width: 40,
+      height: 40,
+      border: '2px solid #2a2a2a',
+      borderTopColor: '#1D9E75',
+      borderRadius: '50%',
+      animation: 'spin 0.8s linear infinite',
+    }} />
+    <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 14, color: '#f0ede8', fontWeight: 500 }}>
+      {mode === 'ai' ? 'Generating AI insights...' : file ? 'Parsing your data...' : 'Loading...'}
+    </div>
+    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#666' }}>
+      {file?.name}
+    </div>
+  </div>
+)}
     <div style={{ flex: 1, marginLeft: 240, padding: '2rem 2rem', maxWidth: 1200 }}>
 
         

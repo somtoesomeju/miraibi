@@ -27,25 +27,50 @@ interface ExploreProps {
   sharedFile?: File | null
   sharedModelYaml?: string
   onFileChange?: (file: File, yaml: string) => void
+  selectedFields?: string[]
+  filters?: Filter[]
+  calculations?: Calculation[]
+  onFieldsChange?: (fields: string[]) => void
+  onFiltersChange?: (filters: Filter[]) => void
+  onCalculationsChange?: (calculations: Calculation[]) => void
 }
 
-export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: ExploreProps) {
+export default function Explore({
+  sharedFile,
+  sharedModelYaml,
+  onFileChange,
+  selectedFields: propFields,
+  filters: propFilters,
+  calculations: propCalcs,
+  onFieldsChange,
+  onFiltersChange,
+  onCalculationsChange,
+}: ExploreProps) {
   const [file, setFile] = useState<File | null>(sharedFile ?? null)
   const [model, setModel] = useState<Model | null>(null)
   const [modelYaml, setModelYaml] = useState(sharedModelYaml ?? '')
   const [showYaml, setShowYaml] = useState(false)
-  const [showChat, setShowChat] = useState(false)
   const [showReport, setShowReport] = useState(false)
-  const [selectedFields, setSelectedFields] = useState<string[]>([])
-  const [filters, setFilters] = useState<Filter[]>([])
-  const [calculations, setCalculations] = useState<Calculation[]>([])
+  const selectedFields = propFields ?? []
+const filters = propFilters ?? []
+const calculations = propCalcs ?? []
+
+const setSelectedFields = (fields: string[] | ((prev: string[]) => string[])) => {
+  const newFields = typeof fields === 'function' ? fields(selectedFields) : fields
+  if (onFieldsChange) onFieldsChange(newFields)
+}
+const setFilters = (filters: Filter[] | ((prev: Filter[]) => Filter[])) => {
+  const newFilters = typeof filters === 'function' ? filters(propFilters ?? []) : filters
+  if (onFiltersChange) onFiltersChange(newFilters)
+}
+const setCalculations = (calcs: Calculation[] | ((prev: Calculation[]) => Calculation[])) => {
+  const newCalcs = typeof calcs === 'function' ? calcs(propCalcs ?? []) : calcs
+  if (onCalculationsChange) onCalculationsChange(newCalcs)
+}
   const [results, setResults] = useState<any[]>([])
   const [resultCols, setResultCols] = useState<string[]>([])
   const [insight, setInsight] = useState('')
   const [loading, setLoading] = useState(false)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
-  const [chatInput, setChatInput] = useState('')
-  const [chatLoading, setChatLoading] = useState(false)
   const chartRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -166,45 +191,7 @@ export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: E
     link.click()
   }
 
-  const sendMessage = async () => {
-    if (!file || !chatInput.trim()) return
-    const userMsg: ChatMessage = { role: 'user', content: chatInput }
-    setChatMessages(prev => [...prev, userMsg])
-    setChatInput('')
-    setChatLoading(true)
-    try {
-      const form = new FormData()
-      form.append('file', file)
-      form.append('model_yaml', modelYaml)
-      form.append('selected_fields', JSON.stringify(selectedFields))
-      form.append('filters', JSON.stringify(filters))
-      form.append('calculations', JSON.stringify(calculations))
-      form.append('messages', JSON.stringify([...chatMessages, userMsg]))
-      form.append('user_message', userMsg.content)
-      const res = await axios.post(`${API}/explore/chat`, form)
-      console.log('Chat response:', res.data)
 
-      const assistantMsg: ChatMessage = {
-        role: 'assistant',
-        content: res.data.reply,
-      }
-
-      if (res.data.new_fields || res.data.new_filters) {
-        const updatedFields = res.data.new_fields ?? selectedFields
-        const updatedFilters = res.data.new_filters ?? filters
-        setSelectedFields(updatedFields)
-        setFilters(updatedFilters)
-        const queryResult = await runQuerySilent(updatedFilters, updatedFields)
-        if (queryResult) {
-          assistantMsg.chartData = queryResult.data
-          assistantMsg.chartCols = queryResult.columns
-        }
-      }
-
-      setChatMessages(prev => [...prev, assistantMsg])
-    } catch (e) { console.error(e) }
-    setChatLoading(false)
-  }
 
   const allFields = model ? [
     ...model.dimensions.map(d => ({ ...d, kind: 'dimension' })),
@@ -255,19 +242,7 @@ export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: E
               <Code size={12} />{showYaml ? 'hide yaml' : 'edit yaml'}
             </button>
           )}
-          <button
-            onClick={() => setShowChat(!showChat)}
-            style={{
-              background: showChat ? 'rgba(55,138,221,0.15)' : 'transparent',
-              border: `0.5px solid ${showChat ? '#378ADD' : '#2a2a2a'}`,
-              borderRadius: 8, padding: '7px 14px',
-              color: showChat ? '#378ADD' : '#888',
-              fontFamily: 'DM Mono, monospace', fontSize: 12,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
-            }}
-          >
-            <Sparkles size={13} />Chat AI
-          </button>
+
         </div>
       </div>
 
@@ -454,114 +429,6 @@ export default function Explore({ sharedFile, sharedModelYaml, onFileChange }: E
         </div>
       )}
 
-      {/* Chat drawer */}
-      <div style={{
-        position: 'fixed', top: 0, right: showChat ? 0 : '-420px',
-        pointerEvents: showChat ? 'all' : 'none',
-        width: 400, height: '100vh', background: '#0e0e0e',
-        borderLeft: '0.5px solid #2a2a2a', transition: 'right 0.3s ease',
-        zIndex: 100, display: 'flex', flexDirection: 'column', padding: '1.5rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '0.5px solid #2a2a2a' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={14} color="#378ADD" />
-              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: '#f0ede8', fontWeight: 500 }}>Chat AI</span>
-            </div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#555', marginTop: 4 }}>powered by claude sonnet</div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <select style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '4px 8px', color: '#888', fontFamily: 'DM Mono, monospace', fontSize: 11, outline: 'none' }}>
-              <option value="claude">Claude Sonnet</option>
-              <option value="gpt" disabled>GPT-4o (soon)</option>
-              <option value="gemini" disabled>Gemini (soon)</option>
-            </select>
-            <button onClick={() => setShowChat(false)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', padding: 4 }}>
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {selectedFields.length > 0 && (
-          <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 12px', marginBottom: 12, fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#555' }}>
-            context: {selectedFields.join(', ')} {filters.length > 0 ? `· ${filters.length} filter(s)` : ''}
-          </div>
-        )}
-
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
-          {chatMessages.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-              <p style={{ color: '#555', fontFamily: 'DM Mono, monospace', fontSize: 12, lineHeight: 1.7 }}>ask me anything about your data</p>
-              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {['show me only march to july', 'which platform had the best roi?', 'what are the top trends?'].map(suggestion => (
-                  <button key={suggestion} onClick={() => setChatInput(suggestion)} style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 12px', color: '#555', fontFamily: 'DM Mono, monospace', fontSize: 11, cursor: 'pointer', textAlign: 'left' }}>
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {chatMessages.map((msg, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div style={{
-                maxWidth: '85%', padding: '10px 14px',
-                borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                background: msg.role === 'user' ? 'rgba(55,138,221,0.12)' : '#141414',
-                border: `0.5px solid ${msg.role === 'user' ? '#378ADD' : '#2a2a2a'}`,
-                color: msg.role === 'user' ? '#378ADD' : '#aaa',
-                fontFamily: 'DM Mono, monospace', fontSize: 12, lineHeight: 1.7
-              }}>
-                {msg.role === 'assistant' ? (
-                  <div style={{ fontSize: 12, lineHeight: 1.8 }}>
-                    <ReactMarkdown components={mdComponents}>
-                      {msg.content.replace(/<query_update>[\s\S]*?<\/query_update>/g, '').trim()}
-                    </ReactMarkdown>
-                    {msg.chartData && msg.chartData.length > 0 && (
-                      <div style={{ marginTop: 12, background: '#0e0e0e', borderRadius: 8, padding: 12 }}>
-                        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#555', marginBottom: 8, textTransform: 'uppercase' }}>chart</div>
-                        <ResponsiveContainer width="100%" height={160}>
-                          <BarChart data={msg.chartData.slice(0, 15)}>
-                            <XAxis dataKey={msg.chartCols?.[0]} tick={{ fontSize: 9, fill: '#555' }} />
-                            <YAxis tick={{ fontSize: 9, fill: '#555' }} />
-                            <Tooltip contentStyle={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, fontFamily: 'DM Mono', fontSize: 11 }} />
-                            {(msg.chartCols?.slice(1) ?? []).filter(col => msg.chartData && typeof msg.chartData[0][col] === 'number').map((col, i) => (
-                              <Bar key={col} dataKey={col} fill={COLORS[i % COLORS.length]} radius={[3, 3, 0, 0]} />
-                            ))}
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                  </div>
-                ) : msg.content}
-              </div>
-            </div>
-          ))}
-          {chatLoading && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-              <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 2px', background: '#141414', border: '0.5px solid #2a2a2a', color: '#1D9E75', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
-                thinking...
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            value={chatInput}
-            onChange={e => setChatInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            placeholder="ask about your data..."
-            style={{ flex: 1, background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '10px 12px', color: '#f0ede8', fontFamily: 'DM Mono, monospace', fontSize: 12, outline: 'none' }}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={chatLoading}
-            style={{ background: 'rgba(55,138,221,0.15)', border: '0.5px solid #378ADD', borderRadius: 8, padding: '10px 14px', color: '#378ADD', fontFamily: 'DM Mono, monospace', fontSize: 12, cursor: 'pointer' }}
-          >
-            ↗
-          </button>
-        </div>
       </div>
-    </div>
   )
 }

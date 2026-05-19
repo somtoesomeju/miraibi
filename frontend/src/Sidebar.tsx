@@ -19,7 +19,7 @@ export default function Sidebar({ page, setPage, mode, setMode, file, onUpload, 
     icon: React.ReactNode,
     label: string,
     onClick: () => void,
-    accent = c.accent.mirai
+    accent: string = c.accent.mirai
   ) => (
     <button
       onClick={onClick}
